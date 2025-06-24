@@ -1,0 +1,33 @@
+{
+  "format": "jmonTone",
+  "version": "1.0",
+  "bpm": 120,
+  "keySignature": "A minor",
+  "metadata": {
+    "title": "Pluck Synth Demo",
+    "author": "jmonDAW",
+    "description": "A demo file showcasing pluck synth capabilities",
+    "duration": 2.0
+  },
+  "sequences": [
+    {
+      "label": "Pluck Melody",
+      "group": "lead",
+      "synth": {
+        "type": "PluckSynth",
+        "attackNoise": 1,
+        "dampening": 4000,
+        "resonance": 0.9
+      },
+      "notes": [
+        { "note": "A3", "time": "0:0:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "C4", "time": "0:1:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "E4", "time": "0:2:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "A4", "time": "0:3:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "C5", "time": "1:0:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "E5", "time": "1:1:0", "duration": "4n", "velocity": 0.8 },
+        { "note": "A5", "time": "1:2:0", "duration": "4n", "velocity": 0.8 }
+      ]
+    }
+  ]
+}

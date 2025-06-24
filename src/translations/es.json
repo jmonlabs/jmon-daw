@@ -1,0 +1,84 @@
+{
+  "app": {
+    "title": "SolidDAW",
+    "subtitle": "Estación de Trabajo de Audio Digital Moderna"
+  },
+  "transport": {
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "stop": "Parar",
+    "record": "Grabar",
+    "loop": "Bucle",
+    "tempo": "Tempo",
+    "bpm": "BPM",
+    "timeSignature": "Compás"
+  },
+  "tracks": {
+    "title": "Pistas",
+    "add": "Añadir Pista",
+    "addFirst": "Añadir Primera Pista",
+    "empty": "No hay pistas aún",
+    "mute": "Silenciar",
+    "solo": "Solo",
+    "arm": "Armar para Grabación",
+    "volume": "Volumen",
+    "pan": "Panorámica"
+  },
+  "clips": {
+    "empty": "Añade pistas para comenzar la secuenciación",
+    "dragHere": "Arrastra archivos audio/MIDI/JMON aquí"
+  },
+  "files": {
+    "browse": "Explorar Archivos",
+    "dragDrop": "Arrastra archivos audio/MIDI/JMON aquí",
+    "dropHere": "Suelta archivos aquí",
+    "supported": "Soporta: WAV, MP3, OGG, FLAC, MIDI, JMON",
+    "importing": "Importando...",
+    "importError": "Error al importar archivo",
+    "unsupportedType": "Tipo de archivo no soportado"
+  },
+  "project": {
+    "new": "Nuevo Proyecto",
+    "open": "Abrir Proyecto",
+    "save": "Guardar Proyecto",
+    "saveAs": "Guardar Como...",
+    "export": "Exportar",
+    "import": "Importar",
+    "name": "Nombre del Proyecto",
+    "untitled": "Proyecto Sin Título"
+  },
+  "menu": {
+    "file": "Archivo",
+    "edit": "Editar",
+    "view": "Ver",
+    "tools": "Herramientas",
+    "help": "Ayuda"
+  },
+  "status": {
+    "playing": "Reproduciendo",
+    "recording": "Grabando",
+    "stopped": "Parado",
+    "tracks": "Pistas",
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "errors": {
+    "audioInit": "Error al inicializar motor de audio",
+    "fileLoad": "Error al cargar archivo",
+    "projectLoad": "Error al cargar proyecto",
+    "projectSave": "Error al guardar proyecto",
+    "generic": "Ocurrió un error"
+  },
+  "widget": {
+    "loading": "Inicializando DAW...",
+    "error": "Error del Widget DAW",
+    "readonly": "Modo solo lectura"
+  },
+  "jmon": {
+    "import": "Importar JMON",
+    "export": "Exportar como JMON",
+    "validate": "Validar JMON",
+    "invalid": "Formato JMON inválido",
+    "success": "JMON procesado exitosamente"
+  }
+}

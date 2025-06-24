@@ -1,0 +1,40 @@
+{
+  "name": "jmon-daw",
+  "version": "1.0.0",
+  "description": "jmonDAW - A modern DAW built with SolidJS and Tone.js for JMON format",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:widget": "vite build --config vite.widget.config.ts",
+    "build:all": "npm run build && npm run build:widget",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "jmon",
+    "daw", 
+    "audio",
+    "music",
+    "solidjs",
+    "tonejs",
+    "json",
+    "notation"
+  ],
+  "author": "ToneDAW Team",
+  "license": "MIT",
+  "dependencies": {
+    "@solidjs/router": "^0.15.3",
+    "iconify-icon": "^3.0.0",
+    "solid-js": "^1.9.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "terser": "^5.43.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-solid": "^2.11.6"
+  }
+}

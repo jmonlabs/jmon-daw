@@ -1,0 +1,84 @@
+{
+  "app": {
+    "title": "SolidDAW",
+    "subtitle": "Station de Travail Audio Numérique Moderne"
+  },
+  "transport": {
+    "play": "Lecture",
+    "pause": "Pause",
+    "stop": "Arrêt",
+    "record": "Enregistrer",
+    "loop": "Boucle",
+    "tempo": "Tempo",
+    "bpm": "BPM",
+    "timeSignature": "Signature Temporelle"
+  },
+  "tracks": {
+    "title": "Pistes",
+    "add": "Ajouter Piste",
+    "addFirst": "Ajouter Première Piste",
+    "empty": "Aucune piste pour le moment",
+    "mute": "Muet",
+    "solo": "Solo",
+    "arm": "Armer pour Enregistrement",
+    "volume": "Volume",
+    "pan": "Panoramique"
+  },
+  "clips": {
+    "empty": "Ajoutez des pistes pour commencer le séquençage",
+    "dragHere": "Glissez des fichiers audio/MIDI/JMON ici"
+  },
+  "files": {
+    "browse": "Parcourir Fichiers",
+    "dragDrop": "Glissez des fichiers audio/MIDI/JMON ici",
+    "dropHere": "Déposez les fichiers ici",
+    "supported": "Supporte: WAV, MP3, OGG, FLAC, MIDI, JMON",
+    "importing": "Importation...",
+    "importError": "Échec de l'importation du fichier",
+    "unsupportedType": "Type de fichier non supporté"
+  },
+  "project": {
+    "new": "Nouveau Projet",
+    "open": "Ouvrir Projet",
+    "save": "Sauvegarder Projet",
+    "saveAs": "Sauvegarder Sous...",
+    "export": "Exporter",
+    "import": "Importer",
+    "name": "Nom du Projet",
+    "untitled": "Projet Sans Titre"
+  },
+  "menu": {
+    "file": "Fichier",
+    "edit": "Édition",
+    "view": "Vue",
+    "tools": "Outils",
+    "help": "Aide"
+  },
+  "status": {
+    "playing": "En Lecture",
+    "recording": "En Enregistrement",
+    "stopped": "Arrêté",
+    "tracks": "Pistes",
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "errors": {
+    "audioInit": "Échec d'initialisation du moteur audio",
+    "fileLoad": "Échec du chargement du fichier",
+    "projectLoad": "Échec du chargement du projet",
+    "projectSave": "Échec de la sauvegarde du projet",
+    "generic": "Une erreur s'est produite"
+  },
+  "widget": {
+    "loading": "Initialisation DAW...",
+    "error": "Erreur du Widget DAW",
+    "readonly": "Mode lecture seule"
+  },
+  "jmon": {
+    "import": "Importer JMON",
+    "export": "Exporter en JMON",
+    "validate": "Valider JMON",
+    "invalid": "Format JMON invalide",
+    "success": "JMON traité avec succès"
+  }
+}

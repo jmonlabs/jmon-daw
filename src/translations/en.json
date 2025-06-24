@@ -1,0 +1,84 @@
+{
+  "app": {
+    "title": "SolidDAW",
+    "subtitle": "Modern Digital Audio Workstation"
+  },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "record": "Record",
+    "loop": "Loop",
+    "tempo": "Tempo",
+    "bpm": "BPM",
+    "timeSignature": "Time Signature"
+  },
+  "tracks": {
+    "title": "Tracks",
+    "add": "Add Track",
+    "addFirst": "Add First Track",
+    "empty": "No tracks yet",
+    "mute": "Mute",
+    "solo": "Solo",
+    "arm": "Arm for Recording",
+    "volume": "Volume",
+    "pan": "Pan"
+  },
+  "clips": {
+    "empty": "Add tracks to start sequencing",
+    "dragHere": "Drag audio/MIDI/JMON files here"
+  },
+  "files": {
+    "browse": "Browse Files",
+    "dragDrop": "Drag audio/MIDI/JMON files here",
+    "dropHere": "Drop files here",
+    "supported": "Supports: WAV, MP3, OGG, FLAC, MIDI, JMON",
+    "importing": "Importing...",
+    "importError": "Failed to import file",
+    "unsupportedType": "Unsupported file type"
+  },
+  "project": {
+    "new": "New Project",
+    "open": "Open Project",
+    "save": "Save Project",
+    "saveAs": "Save As...",
+    "export": "Export",
+    "import": "Import",
+    "name": "Project Name",
+    "untitled": "Untitled Project"
+  },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "tools": "Tools",
+    "help": "Help"
+  },
+  "status": {
+    "playing": "Playing",
+    "recording": "Recording",
+    "stopped": "Stopped",
+    "tracks": "Tracks",
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "errors": {
+    "audioInit": "Failed to initialize audio engine",
+    "fileLoad": "Failed to load file",
+    "projectLoad": "Failed to load project",
+    "projectSave": "Failed to save project",
+    "generic": "An error occurred"
+  },
+  "widget": {
+    "loading": "Initializing DAW...",
+    "error": "DAW Widget Error",
+    "readonly": "Read-only mode"
+  },
+  "jmon": {
+    "import": "Import JMON",
+    "export": "Export as JMON",
+    "validate": "Validate JMON",
+    "invalid": "Invalid JMON format",
+    "success": "JMON processed successfully"
+  }
+}
