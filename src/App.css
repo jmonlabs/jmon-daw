@@ -209,3 +209,144 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .opacity-50 {
   opacity: 0.5;
 }
+
+/* Piano Roll Styles */
+.piano-note {
+  position: absolute;
+  border-radius: 3px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+  z-index: 10;
+  min-height: 8px;
+  padding: 0 4px;
+}
+
+.piano-note:hover {
+  z-index: 15;
+  transform: scale(1.02);
+}
+
+.piano-note.selected {
+  z-index: 20;
+  transform: scale(1.02);
+}
+
+.piano-note.dragging {
+  z-index: 25;
+  cursor: grabbing;
+  /* Keep same visual appearance as selected state during drag */
+}
+
+.note-text {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.note-resize-handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: ew-resize;
+  z-index: 15;
+  border-radius: 2px;
+  transition: background-color 0.1s ease;
+}
+
+.note-resize-handle.left {
+  left: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.note-resize-handle.right {
+  right: 0;
+  border-radius: 0 3px 3px 0;
+}
+
+.note-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.piano-note:hover .note-resize-handle {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.piano-line {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  pointer-events: none;
+}
+
+.piano-line.black-key {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.piano-line.white-key {
+  background: transparent;
+}
+
+.note-name {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  user-select: none;
+  opacity: 0.7;
+}
+
+/* Track and Clip Styles */
+.track-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tracks-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.track-lane {
+  position: relative;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.track-lane.expanded {
+  /* Expanded track styling */
+}
+
+.track-lane.compact {
+  /* Compact track styling */
+}
+
+.midi-clip {
+  position: absolute;
+  background: rgba(74, 144, 226, 0.1);
+  border: 1px solid rgba(74, 144, 226, 0.3);
+  border-radius: 4px;
+  /* IMPORTANT: Allow overflow so notes can be dragged outside clip bounds */
+  overflow: visible;
+  /* Ensure clip doesn't clip child elements */
+  contain: none;
+}
+
+.track-clips {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Allow child clips to overflow */
+  overflow: visible;
+}

@@ -3,6 +3,7 @@ import { useProject, useView, useTransport } from '../stores/context';
 import { DropZone } from './DropZone';
 import { Icon } from './Icon';
 import { ContextMenu } from './ContextMenu';
+import { PianoRoll } from './PianoRoll';
 import type { Clip, MidiNote, MidiClipContent } from '../types';
 
 export const TrackArea: Component = () => {
@@ -87,6 +88,85 @@ export const TrackArea: Component = () => {
     startDuration: 0, 
     startPitch: '' 
   });
+
+  const [pianoRollOpen, setPianoRollOpen] = createSignal<Clip | null>(null);
+  const [expandedTracks, setExpandedTracks] = createSignal<Set<string>>(new Set());
+  const [trackHeights, setTrackHeights] = createSignal<Map<string, number>>(new Map());
+  const [selectedNote, setSelectedNote] = createSignal<{clipId: string, noteIndex: number} | null>(null);
+  
+  
+  const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
+
+  // Helper functions for adaptive piano roll
+  const getTrackColor = (track: any): {normal: string, darker: string} => {
+    // Generate consistent colors based on track ID
+    const colors = [
+      { normal: '#4dabf7', darker: '#339af0' }, // Blue
+      { normal: '#51cf66', darker: '#40c057' }, // Green  
+      { normal: '#ff8cc8', darker: '#ff6bab' }, // Pink
+      { normal: '#ffd43b', darker: '#fcc419' }, // Yellow
+      { normal: '#ff9f43', darker: '#fd7e14' }, // Orange
+      { normal: '#845ef7', darker: '#7950f2' }, // Purple
+      { normal: '#20c997', darker: '#12b886' }, // Teal
+      { normal: '#fa5252', darker: '#e03131' }, // Red
+    ];
+    
+    // Use track position in project for consistent coloring
+    const trackIndex = project.tracks.findIndex(t => t.id === track.id);
+    return colors[trackIndex % colors.length] || colors[0];
+  };
+  const getTrackNoteRange = (track: any) => {
+    let minNote = 127;
+    let maxNote = 0;
+    let hasNotes = false;
+
+    track.clips.forEach((clip: Clip) => {
+      if (clip.content.type === 'midi') {
+        const midiContent = clip.content as MidiClipContent;
+        midiContent.notes.forEach((note) => {
+          hasNotes = true;
+          const midiNumber = typeof note.note === 'string' ? getPitchFromNote(note.note) : note.note;
+          minNote = Math.min(minNote, midiNumber);
+          maxNote = Math.max(maxNote, midiNumber);
+        });
+      }
+    });
+
+    if (!hasNotes) return { min: 60, max: 72, range: 12 }; // Default to C4-C5
+    
+    // Add some padding
+    const padding = 3;
+    minNote = Math.max(24, minNote - padding);
+    maxNote = Math.min(108, maxNote + padding);
+    
+    return { min: minNote, max: maxNote, range: maxNote - minNote + 1 };
+  };
+
+  const getAdaptiveTrackHeight = (track: any): number => {
+    const noteRange = getTrackNoteRange(track);
+    const isExpanded = expandedTracks().has(track.id);
+    
+    if (isExpanded) {
+      // Expanded mode: minimum 16px per semitone for comfortable editing
+      return Math.max(300, noteRange.range * 16);
+    } else {
+      // Compact mode: minimum 8px per semitone, minimum 120px
+      return Math.max(120, noteRange.range * 8);
+    }
+  };
+
+  const toggleTrackExpansion = (trackId: string) => {
+    const expanded = expandedTracks();
+    const newExpanded = new Set(expanded);
+    
+    if (expanded.has(trackId)) {
+      newExpanded.delete(trackId);
+    } else {
+      newExpanded.add(trackId);
+    }
+    
+    setExpandedTracks(newExpanded);
+  };
 
   const handleAddTrack = () => {
     addTrack({
@@ -238,6 +318,23 @@ export const TrackArea: Component = () => {
     }
   };
 
+  const handleClipDoubleClick = (e: MouseEvent, clip: Clip) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only open piano roll for MIDI clips
+    if (clip.content.type === 'midi') {
+      setPianoRollOpen(clip);
+    }
+  };
+
+  const handleTrackLaneClick = (e: MouseEvent) => {
+    // Deselect notes when clicking on empty track area
+    if (e.target === e.currentTarget) {
+      setSelectedNote(null);
+    }
+  };
+
   // Loop region drag handlers
   const handleLoopMouseDown = (e: MouseEvent, type: 'start' | 'end' | 'region') => {
     e.preventDefault();
@@ -350,179 +447,378 @@ export const TrackArea: Component = () => {
     
     if (clip.content.type !== 'midi') return;
     
+    // Always select the note first
+    console.log(`Selecting note: clipId=${clip.id}, noteIndex=${noteIndex}`);
+    setSelectedNote({clipId: clip.id, noteIndex});
+    
     const midiContent = clip.content as MidiClipContent;
     const note = midiContent.notes[noteIndex];
     if (!note) return;
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const elementRect = (e.currentTarget as HTMLElement).closest('.clip')?.getBoundingClientRect();
-    if (!elementRect) return;
+    console.log(`Starting drag on note: time=${note.time}, duration=${note.duration}, pitch=${note.note}`);
 
-    const relativeX = e.clientX - elementRect.left;
-    const relativeY = e.clientY - elementRect.top;
-    
-    // Determine drag type based on mouse position within note
-    let dragType: 'pitch' | 'start' | 'end' | 'position' = 'position';
-    const noteWidth = rect.width;
-    
-    if (relativeX < 4) {
-      dragType = 'start';
-    } else if (relativeX > noteWidth - 4) {
-      dragType = 'end';
-    } else {
-      dragType = 'pitch';
-    }
+    // Since resize handles have their own handlers, this is always position movement
+    const dragType: 'pitch' | 'start' | 'end' | 'position' = 'position';
+    console.log('Note body clicked - will move note');
 
-    setNoteDragging({
-      active: true,
-      type: dragType,
-      noteIndex,
-      clipId: clip.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      startTime: note.time,
-      startDuration: note.duration,
-      startPitch: note.note
-    });
+    let hasMoved = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
 
-    const handleNoteMouseMove = (e: MouseEvent) => {
-      const drag = noteDragging();
-      if (!drag.active) return;
-
-      const deltaX = e.clientX - drag.startX;
-      const deltaY = e.clientY - drag.startY;
-      const deltaTime = deltaX / timelineScale();
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = Math.abs(moveEvent.clientX - startX);
+      const deltaY = Math.abs(moveEvent.clientY - startY);
       
-      const clip = project.tracks.find(t => t.clips.some(c => c.id === drag.clipId))?.clips.find(c => c.id === drag.clipId);
-      if (!clip || clip.content.type !== 'midi') return;
-
-      const midiContent = clip.content as MidiClipContent;
-      const currentNote = midiContent.notes[drag.noteIndex];
-      
-      if (drag.type === 'pitch') {
-        // Convert Y delta to pitch change (each 4px = 1 semitone)
-        const semitoneChange = Math.round(-deltaY / 4);
-        let newPitch: string | number;
-        
-        if (typeof drag.startPitch === 'string') {
-          const midiNumber = getPitchFromNote(drag.startPitch);
-          const newMidiNumber = Math.max(0, Math.min(127, midiNumber + semitoneChange));
-          newPitch = getNoteFromPitch(newMidiNumber);
-        } else {
-          newPitch = Math.max(0, Math.min(127, drag.startPitch + semitoneChange));
-        }
-
-        // Update drag state with current pitch and mouse position for floating label
+      // Only start dragging if mouse has moved more than 3 pixels
+      if (!hasMoved && (deltaX > 3 || deltaY > 3)) {
+        hasMoved = true;
+        console.log('Starting drag');
         setNoteDragging({
-          ...drag,
-          currentPitch: newPitch,
-          mouseX: e.clientX,
-          mouseY: e.clientY
+          active: true,
+          type: dragType,
+          noteIndex,
+          clipId: clip.id,
+          startX: startX,
+          startY: startY,
+          startTime: note.time,
+          startDuration: note.duration,
+          startPitch: note.note
         });
-
-        const updatedNotes = [...midiContent.notes];
-        updatedNotes[drag.noteIndex] = { ...currentNote, note: newPitch };
-        
-        updateClip(clip.id, {
-          content: { ...midiContent, notes: updatedNotes }
-        });
-      } else if (drag.type === 'start') {
-        let newTime = Math.max(0, drag.startTime + deltaTime);
-        let newDuration = drag.startDuration - deltaTime;
-        
-        if (view.snapToGrid) {
-          const snapSize = view.gridSize;
-          newTime = Math.round(newTime / snapSize) * snapSize;
-          newDuration = Math.max(snapSize, drag.startDuration - (newTime - drag.startTime));
-        } else {
-          newDuration = Math.max(0.25, newDuration);
-        }
-
-        const updatedNotes = [...midiContent.notes];
-        updatedNotes[drag.noteIndex] = { ...currentNote, time: newTime, duration: newDuration };
-        
-        updateClip(clip.id, {
-          content: { ...midiContent, notes: updatedNotes }
-        });
-      } else if (drag.type === 'end') {
-        let newDuration = Math.max(0.25, drag.startDuration + deltaTime);
-        
-        if (view.snapToGrid) {
-          const snapSize = view.gridSize;
-          newDuration = Math.max(snapSize, Math.round(newDuration / snapSize) * snapSize);
-        }
-
-        const updatedNotes = [...midiContent.notes];
-        updatedNotes[drag.noteIndex] = { ...currentNote, duration: newDuration };
-        
-        updateClip(clip.id, {
-          content: { ...midiContent, notes: updatedNotes }
-        });
-      } else if (drag.type === 'position') {
-        let newTime = Math.max(0, drag.startTime + deltaTime);
-        
-        if (view.snapToGrid) {
-          const snapSize = view.gridSize;
-          newTime = Math.round(newTime / snapSize) * snapSize;
-        }
-
-        const updatedNotes = [...midiContent.notes];
-        updatedNotes[drag.noteIndex] = { ...currentNote, time: newTime };
-        
-        updateClip(clip.id, {
-          content: { ...midiContent, notes: updatedNotes }
-        });
+      }
+      
+      // Continue with existing drag logic if we've started dragging
+      if (hasMoved) {
+        handleNoteDrag(moveEvent);
       }
     };
 
-    const handleNoteMouseUp = () => {
-      setNoteDragging({ 
-        active: false, 
-        type: null, 
-        noteIndex: -1, 
-        clipId: '', 
-        startX: 0, 
-        startY: 0, 
-        startTime: 0, 
-        startDuration: 0, 
-        startPitch: '',
-        currentPitch: undefined,
-        mouseX: undefined,
-        mouseY: undefined
-      });
-      document.removeEventListener('mousemove', handleNoteMouseMove);
-      document.removeEventListener('mouseup', handleNoteMouseUp);
+    const handleMouseUp = () => {
+      if (hasMoved) {
+        console.log('Ending drag');
+        setNoteDragging({ 
+          active: false, 
+          type: null, 
+          noteIndex: -1, 
+          clipId: '', 
+          startX: 0, 
+          startY: 0, 
+          startTime: 0, 
+          startDuration: 0, 
+          startPitch: '',
+          currentPitch: undefined,
+          mouseX: undefined,
+          mouseY: undefined
+        });
+      } else {
+        console.log('Just a click, no drag');
+      }
+      
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
 
-    document.addEventListener('mousemove', handleNoteMouseMove);
-    document.addEventListener('mouseup', handleNoteMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
+
+  const handleResizeMouseDown = (e: MouseEvent, clip: Clip, noteIndex: number, dragType: 'start' | 'end') => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (clip.content.type !== 'midi') return;
+    
+    // Always select the note first
+    setSelectedNote({clipId: clip.id, noteIndex});
+    
+    const midiContent = clip.content as MidiClipContent;
+    const note = midiContent.notes[noteIndex];
+    if (!note) return;
+
+    console.log(`${dragType === 'start' ? 'Left' : 'Right'} resize handle clicked`);
+
+    let hasMoved = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = Math.abs(moveEvent.clientX - startX);
+      const deltaY = Math.abs(moveEvent.clientY - startY);
+      
+      // Only start dragging if mouse has moved more than 3 pixels
+      if (!hasMoved && (deltaX > 3 || deltaY > 3)) {
+        hasMoved = true;
+        console.log(`Starting ${dragType} resize`);
+        setNoteDragging({
+          active: true,
+          type: dragType,
+          noteIndex,
+          clipId: clip.id,
+          startX: startX,
+          startY: startY,
+          startTime: note.time,
+          startDuration: note.duration,
+          startPitch: note.note
+        });
+      }
+      
+      // Continue with existing drag logic if we've started dragging
+      if (hasMoved) {
+        handleNoteDrag(moveEvent);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (hasMoved) {
+        console.log(`Ending ${dragType} resize`);
+        setNoteDragging({ 
+          active: false, 
+          type: null, 
+          noteIndex: -1, 
+          clipId: '', 
+          startX: 0, 
+          startY: 0, 
+          startTime: 0, 
+          startDuration: 0, 
+          startPitch: '',
+          currentPitch: undefined,
+          mouseX: undefined,
+          mouseY: undefined
+        });
+      } else {
+        console.log(`Just a click on ${dragType} handle, no resize`);
+      }
+      
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleNoteDrag = (e: MouseEvent) => {
+    const drag = noteDragging();
+    if (!drag.active) return;
+
+    const deltaX = e.clientX - drag.startX;
+    const deltaY = e.clientY - drag.startY;
+    const timeScale = timelineScale();
+    const deltaTime = deltaX / timeScale;
+    
+    console.log(`Drag values: deltaX=${deltaX}, timeScale=${timeScale}, deltaTime=${deltaTime.toFixed(4)}, direction=${deltaX < 0 ? 'LEFT' : 'RIGHT'}`);
+    
+    const clip = project.tracks.find(t => t.clips.some(c => c.id === drag.clipId))?.clips.find(c => c.id === drag.clipId);
+    if (!clip || clip.content.type !== 'midi') return;
+
+    const midiContent = clip.content as MidiClipContent;
+    const currentNote = midiContent.notes[drag.noteIndex];
+    
+    // Get track for pitch calculations
+    const track = project.tracks.find(t => t.clips.some(c => c.id === drag.clipId));
+    if (!track) return;
+    
+    const noteRange = getTrackNoteRange(track);
+    const trackHeight = getAdaptiveTrackHeight(track);
+    const lineHeight = trackHeight / noteRange.range;
+    
+    if (drag.type === 'position') {
+      // Handle both time and pitch changes  
+      let newTime = drag.startTime + deltaTime;
+      
+      // Only clamp to 0 if the result would be negative
+      if (newTime < 0) {
+        newTime = 0;
+      }
+      
+      // Calculate pitch change based on vertical movement
+      const pitchChange = Math.round(-deltaY / lineHeight);
+      const startMidiNumber = typeof drag.startPitch === 'string' ? getPitchFromNote(drag.startPitch) : drag.startPitch;
+      const newMidiNumber = Math.max(noteRange.min, Math.min(noteRange.max, startMidiNumber + pitchChange));
+      const newPitch = getNoteFromPitch(newMidiNumber);
+      
+      console.log(`Moving note: startTime=${drag.startTime.toFixed(2)}, deltaX=${deltaX.toFixed(1)}, deltaTime=${deltaTime.toFixed(2)}, newTime=${newTime.toFixed(2)}, clamped=${newTime < drag.startTime + deltaTime ? 'YES' : 'NO'}`);
+      
+      if (view.snapToGrid) {
+        const snapSize = view.gridSize;
+        newTime = Math.round(newTime / snapSize) * snapSize;
+      }
+
+      // Update drag state for floating label
+      setNoteDragging({
+        ...drag,
+        currentPitch: newPitch,
+        mouseX: e.clientX,
+        mouseY: e.clientY
+      });
+
+      const updatedNotes = [...midiContent.notes];
+      updatedNotes[drag.noteIndex] = { ...currentNote, time: newTime, note: newPitch };
+      
+      updateClip(clip.id, {
+        content: { ...midiContent, notes: updatedNotes }
+      });
+    } else if (drag.type === 'start') {
+      let newTime = Math.max(0, drag.startTime + deltaTime);
+      let newDuration = drag.startDuration - deltaTime;
+      
+      if (view.snapToGrid) {
+        const snapSize = view.gridSize;
+        newTime = Math.round(newTime / snapSize) * snapSize;
+        newDuration = Math.max(snapSize, drag.startDuration - (newTime - drag.startTime));
+      } else {
+        newDuration = Math.max(0.25, newDuration);
+      }
+
+      const updatedNotes = [...midiContent.notes];
+      updatedNotes[drag.noteIndex] = { ...currentNote, time: newTime, duration: newDuration };
+      
+      updateClip(clip.id, {
+        content: { ...midiContent, notes: updatedNotes }
+      });
+    } else if (drag.type === 'end') {
+      let newDuration = Math.max(0.25, drag.startDuration + deltaTime);
+      
+      if (view.snapToGrid) {
+        const snapSize = view.gridSize;
+        newDuration = Math.max(snapSize, Math.round(newDuration / snapSize) * snapSize);
+      }
+
+      const updatedNotes = [...midiContent.notes];
+      updatedNotes[drag.noteIndex] = { ...currentNote, duration: newDuration };
+      
+      updateClip(clip.id, {
+        content: { ...midiContent, notes: updatedNotes }
+      });
+    }
+  };
+
+  // Arrow key navigation for selected notes
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Don't interfere with text editing - check if focus is on input/textarea
+    const activeElement = document.activeElement;
+    if (activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' ||
+      activeElement.contentEditable === 'true' ||
+      activeElement.getAttribute('role') === 'textbox'
+    )) {
+      return; // Let the text editor handle the keys
+    }
+    
+    const selected = selectedNote();
+    if (!selected) return;
+    
+    const clip = project.tracks.find(t => t.clips.some(c => c.id === selected.clipId))?.clips.find(c => c.id === selected.clipId);
+    if (!clip || clip.content.type !== 'midi') return;
+    
+    const midiContent = clip.content as MidiClipContent;
+    const note = midiContent.notes[selected.noteIndex];
+    if (!note) return;
+    
+    const track = project.tracks.find(t => t.clips.some(c => c.id === selected.clipId));
+    if (!track) return;
+    
+    const noteRange = getTrackNoteRange(track);
+    let updated = false;
+    let newTime = note.time;
+    let newPitch = note.note;
+    
+    // Calculate snap amount for horizontal movement
+    const snapAmount = view.snapToGrid ? view.gridSize : 0.25; // Default to quarter note if snap is off
+    
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        newTime = Math.max(0, note.time - snapAmount);
+        updated = true;
+        console.log(`Arrow left: moving note from ${note.time.toFixed(2)} to ${newTime.toFixed(2)}`);
+        break;
+        
+      case 'ArrowRight':
+        e.preventDefault();
+        newTime = note.time + snapAmount;
+        updated = true;
+        console.log(`Arrow right: moving note from ${note.time.toFixed(2)} to ${newTime.toFixed(2)}`);
+        break;
+        
+      case 'ArrowUp':
+        e.preventDefault();
+        const currentMidiUp = typeof note.note === 'string' ? getPitchFromNote(note.note) : note.note;
+        const newMidiUp = Math.min(noteRange.max, currentMidiUp + 1);
+        newPitch = getNoteFromPitch(newMidiUp);
+        updated = true;
+        console.log(`Arrow up: moving note from ${note.note} to ${newPitch}`);
+        break;
+        
+      case 'ArrowDown':
+        e.preventDefault();
+        const currentMidiDown = typeof note.note === 'string' ? getPitchFromNote(note.note) : note.note;
+        const newMidiDown = Math.max(noteRange.min, currentMidiDown - 1);
+        newPitch = getNoteFromPitch(newMidiDown);
+        updated = true;
+        console.log(`Arrow down: moving note from ${note.note} to ${newPitch}`);
+        break;
+    }
+    
+    if (updated) {
+      console.log(`Arrow key updating: clipId=${clip.id}, noteIndex=${selected.noteIndex}, notesInClip=${midiContent.notes.length}`);
+      const updatedNotes = [...midiContent.notes];
+      updatedNotes[selected.noteIndex] = { ...note, time: newTime, note: newPitch };
+      
+      updateClip(clip.id, {
+        content: { ...midiContent, notes: updatedNotes }
+      });
+    }
+  };
+
+  // Add keyboard event listener
+  createEffect(() => {
+    const handleKeyDownWrapper = (e: KeyboardEvent) => {
+      console.log('Keyboard event fired, selectedNote:', selectedNote());
+      handleKeyDown(e);
+    };
+    console.log('Adding keyboard event listener');
+    document.addEventListener('keydown', handleKeyDownWrapper);
+    
+    return () => {
+      console.log('Removing keyboard event listener');
+      document.removeEventListener('keydown', handleKeyDownWrapper);
+    };
+  });
 
   return (
     <div class="track-area" style={`--timeline-scale: ${timelineScale()}px`}>
       <div class="timeline-header">
-        <div class="track-header-spacer">
+        <div class={`track-header-spacer ${sidebarCollapsed() ? 'collapsed' : ''}`}>
           <h3>{project.name}</h3>
-        </div>
-        <div class="timeline">
-          <div 
-            class="timeline-ruler"
-            onContextMenu={(e) => {
-              e.preventDefault();
-              const rect = e.currentTarget.getBoundingClientRect();
-              const clickX = e.clientX - rect.left;
-              const timePosition = clickX; // Keep in pixels for context menu
-              
-              setContextMenu({
-                show: true,
-                x: e.clientX,
-                y: e.clientY,
-                clip: null,
-                trackId: null,
-                timePosition
-              });
-            }}
+          <button 
+            class="sidebar-collapse-btn" 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
+            title={sidebarCollapsed() ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
+            <Icon name={sidebarCollapsed() ? 'chevron-right' : 'chevron-left'} size={14} />
+          </button>
+        </div>
+        <Show when={!sidebarCollapsed()}>
+          <div class="timeline">
+            <div 
+              class="timeline-ruler"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const timePosition = clickX; // Keep in pixels for context menu
+                
+                setContextMenu({
+                  show: true,
+                  x: e.clientX,
+                  y: e.clientY,
+                  clip: null,
+                  trackId: null,
+                  timePosition
+                });
+              }}
+            >
             {/* Timeline markers with subdivisions */}
             <For each={Array.from({ length: 32 }, (_, i) => i)}>
               {(bar) => (
@@ -577,22 +873,57 @@ export const TrackArea: Component = () => {
             <div class="playhead" style={`left: ${secondsToBeats(transport.currentTime) * timelineScale()}px`}></div>
           </div>
         </div>
+      </Show>
       </div>
       
+      {/* Global Attributes Section */}
+      <div class="global-attributes">
+        <div class={`global-attrs-spacer ${sidebarCollapsed() ? 'collapsed' : ''}`}>
+          <Show when={!sidebarCollapsed()}>
+            <div class="bpm-display">
+              <span class="attr-label">BPM:</span>
+              <span class="attr-value">{transport.tempo}</span>
+            </div>
+          </Show>
+        </div>
+        <Show when={!sidebarCollapsed()}>
+          <div class="global-attrs-timeline">
+            {/* Space for tempo changes, time signature changes, etc. */}
+            <div class="tempo-track">
+              {/* Future: Tempo change markers will go here */}
+            </div>
+          </div>
+        </Show>
+      </div>
+      
+      
       <div class="main-content">
-        <div class="track-sidebar">
+        <div class={`track-sidebar ${sidebarCollapsed() ? 'collapsed' : ''}`}>
           <div class="track-list">
-            <Show when={project.tracks.length === 0}>
-              <div class="empty-state">
-                <p>No tracks yet</p>
-                <button onClick={handleAddTrack}>Add First Track</button>
-              </div>
-            </Show>
             <For each={project.tracks}>
-              {(track) => (
-                <div class="track-item">
-                  <div class="track-name">{track.name}</div>
-                  <div class="track-controls">
+              {(track) => {
+                const trackHeight = getAdaptiveTrackHeight(track);
+                return (
+                  <div class="track-item" style={`height: ${trackHeight}px;`}>
+                    <Show when={!sidebarCollapsed()}>
+                      <div class="track-item-content">
+                        <div class="track-name">{track.name}</div>
+                        <div class="track-controls">
+                    <Show when={track.clips.some((c: Clip) => c.content.type === 'midi')}>
+                      <button 
+                        class={`track-btn expand ${expandedTracks().has(track.id) ? 'active' : ''}`}
+                        title="Open Piano Roll"
+                        onClick={() => {
+                          // Find the first MIDI clip to open in piano roll
+                          const midiClip = track.clips.find((c: Clip) => c.content.type === 'midi');
+                          if (midiClip) {
+                            setPianoRollOpen(midiClip);
+                          }
+                        }}
+                      >
+                        <Icon name="edit-3" size={12} color="var(--text-secondary)" />
+                      </button>
+                    </Show>
                     <button 
                       class={`track-btn volume ${showVolumeSlider() === track.id ? 'active' : ''}`} 
                       title="Volume"
@@ -736,120 +1067,221 @@ export const TrackArea: Component = () => {
                       />
                     </div>
                   </Show>
-                </div>
-              )}
+                      </div>
+                    </Show>
+                    <Show when={sidebarCollapsed()}>
+                      <div class="track-color-indicator" style={`background-color: ${getTrackColor(track).normal};`}></div>
+                    </Show>
+                  </div>
+                );
+              }}
             </For>
-            <button class="new-track-btn" onClick={handleAddTrack}>
-              <Icon name="plus" size={14} color="var(--text-secondary)" />
-              <span>New Track</span>
-            </button>
+            <Show when={!sidebarCollapsed()}>
+              <button class="new-track-btn" onClick={handleAddTrack}>
+                <Icon name="plus" size={14} color="var(--text-secondary)" />
+                <span>New Track</span>
+              </button>
+            </Show>
           </div>
         </div>
         <div class="tracks-container">
           {/* Playhead for tracks */}
           <div class="tracks-playhead" style={`left: ${secondsToBeats(transport.currentTime) * timelineScale()}px`}></div>
-          <Show when={project.tracks.length === 0}>
-            <div class="empty-sequencer">
-              <DropZone onFileDrop={(files) => {
-                // Auto-create track when files are dropped on empty area
-                files.forEach((file, index) => {
-                  const trackName = `Track ${project.tracks.length + index + 1}`;
-                  addTrack({
-                    name: trackName,
-                    type: file.type.startsWith('audio/') ? 'audio' : 'instrument',
-                    volume: 0.8,
-                    pan: 0,
-                    muted: false,
-                    solo: false,
-                    armed: false,
-                    color: '#3b82f6',
-                    clips: [],
-                    effects: []
-                  });
-                });
-              }} />
-            </div>
-          </Show>
+          
+          
           <For each={project.tracks}>
-            {(track) => (
-              <DropZone trackId={track.id}>
-                <div class="track-lane" onContextMenu={(e) => handleTrackRightClick(e, track.id)}>
-                  <div class="track-clips">
-                    <For each={track.clips}>
-                      {(clip) => (
-                        <div 
-                          class="clip"
-                          style={`left: ${clip.start * timelineScale()}px; width: ${Math.max(clip.duration * timelineScale(), 30)}px; background-color: ${clip.color}; top: 1px; height: 68px; z-index: 10; border: 1px solid white; cursor: ${dragging().clip?.id === clip.id ? 'grabbing' : 'grab'};`}
-                          onContextMenu={(e) => handleClipRightClick(e, clip)}
-                          onMouseDown={(e) => handleClipMouseDown(e, clip)}
-                        >
-                          <div class="clip-name">{clip.name}</div>
-                          <Show when={clip.content.type === 'audio' && (clip.content as any).waveform}>
-                            <div class="clip-waveform">
-                              <For each={(clip.content as any).waveform}>
-                                {(sample, index) => (
-                                  <div 
-                                    class="waveform-bar"
-                                    style={`height: ${sample * 100}%; left: ${index() * 2}px`}
-                                  />
-                                )}
-                              </For>
-                            </div>
-                          </Show>
-                          <Show when={clip.content.type === 'midi'}>
-                            <div class="clip-notes">
-                              <For each={(clip.content as MidiClipContent).notes}>
-                                {(note, noteIndex) => {
-                                  const noteLeft = note.time * timelineScale();
-                                  const noteWidth = Math.max(note.duration * timelineScale(), 8);
+            {(track) => {
+              const trackHeight = getAdaptiveTrackHeight(track);
+              const noteRange = getTrackNoteRange(track);
+              const isExpanded = expandedTracks().has(track.id);
+              
+              return (
+                <DropZone trackId={track.id}>
+                  <div 
+                    class={`track-lane ${isExpanded ? 'expanded' : 'compact'}`}
+                    style={`height: ${trackHeight}px; position: relative;`}
+                    onContextMenu={(e) => handleTrackRightClick(e, track.id)}
+                    onClick={handleTrackLaneClick}
+                  >
+                    {/* Track Piano Roll Background */}
+                    <Show when={track.clips.some((c: Clip) => c.content.type === 'midi')}>
+                      <div class="track-piano-background">
+                        {/* Piano roll lines */}
+                        <For each={Array.from({ length: noteRange.range }, (_, i) => noteRange.max - i)}>
+                          {(midiNumber) => {
+                            const isBlackKey = [1, 3, 6, 8, 10].includes(midiNumber % 12);
+                            const noteIndex = noteRange.max - midiNumber;
+                            const lineHeight = trackHeight / noteRange.range;
+                            const y = noteIndex * lineHeight;
+                            
+                            return (
+                              <div 
+                                class={`piano-line ${isBlackKey ? 'black-key' : 'white-key'}`}
+                                style={`
+                                  top: ${y}px;
+                                  height: ${lineHeight}px;
+                                  width: 100%;
+                                  position: absolute;
+                                  border-bottom: 1px solid ${isBlackKey ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)'};
+                                `}
+                              >
+                                <Show when={!isBlackKey && (midiNumber % 12 === 0) && isExpanded}>
+                                  <span class="note-name">{getNoteFromPitch(midiNumber)}</span>
+                                </Show>
+                              </div>
+                            );
+                          }}
+                        </For>
+                      </div>
+                    </Show>
+
+                    {/* Audio/MIDI Clips */}
+                    <div class="track-clips">
+                      <For each={track.clips}>
+                        {(clip) => (
+                          <Show 
+                            when={clip.content.type === 'midi'}
+                            fallback={
+                              /* Audio clips */
+                              <div 
+                                class="audio-clip"
+                                style={`
+                                  left: ${clip.start * timelineScale()}px; 
+                                  width: ${Math.max(clip.duration * timelineScale(), 30)}px; 
+                                  background-color: ${clip.color}; 
+                                  height: ${Math.min(trackHeight - 4, 68)}px;
+                                  top: 2px;
+                                `}
+                                onContextMenu={(e) => handleClipRightClick(e, clip)}
+                                onMouseDown={(e) => handleClipMouseDown(e, clip)}
+                              >
+                                <div class="clip-name">{clip.name}</div>
+                                <Show when={(clip.content as any).waveform}>
+                                  <div class="clip-waveform">
+                                    <For each={(clip.content as any).waveform}>
+                                      {(sample, index) => (
+                                        <div 
+                                          class="waveform-bar"
+                                          style={`height: ${sample * 100}%; left: ${index() * 2}px`}
+                                        />
+                                      )}
+                                    </For>
+                                  </div>
+                                </Show>
+                              </div>
+                            }
+                          >
+                            {/* MIDI Piano Roll Clips */}
+                            <div 
+                              class="midi-clip"
+                              style={`
+                                left: ${clip.start * timelineScale()}px; 
+                                width: ${Math.max(clip.duration * timelineScale(), 30)}px; 
+                                height: ${trackHeight}px;
+                                top: 0;
+                              `}
+                              onContextMenu={(e) => handleClipRightClick(e, clip)}
+                              onDoubleClick={(e) => handleClipDoubleClick(e, clip)}
+                            >
+                              {/* Notes rendered directly in piano roll format */}
+                              {(() => {
+                                // Force reactivity by accessing selectedNote outside the For loop
+                                const currentSelection = selectedNote();
+                                return (
+                                  <For each={(clip.content as MidiClipContent).notes}>
+                                    {(note, noteIndex) => {
+                                      // Capture the actual index value at render time
+                                      const actualIndex = noteIndex();
                                   
-                                  // Convert pitch to visual position (higher pitch = higher on screen)
-                                  let pitchNumber: number;
-                                  if (typeof note.note === 'string') {
-                                    pitchNumber = getPitchFromNote(note.note);
-                                  } else {
-                                    pitchNumber = note.note;
+                                  
+                                      const noteLeft = note.time * timelineScale();
+                                      const noteWidth = Math.max(note.duration * timelineScale(), 12);
+                                      
+                                      const midiNumber = typeof note.note === 'string' ? getPitchFromNote(note.note) : note.note;
+                                      
+                                      // Calculate Y position using same logic as piano lines
+                                      const noteIndex_pos = noteRange.max - midiNumber;
+                                      const lineHeight = trackHeight / noteRange.range;
+                                      const noteY = noteIndex_pos * lineHeight;
+                                      const noteHeight = Math.max(lineHeight - 2, 8); // Leave 2px gap between notes
+                                      
+                                      const drag = noteDragging();
+                                      const isBeingDragged = drag.active && drag.clipId === clip.id && drag.noteIndex === actualIndex;
+                                      const isSelected = currentSelection?.clipId === clip.id && currentSelection?.noteIndex === actualIndex;
+                                      
+                                      // Debug selection states
+                                      if (isSelected || isBeingDragged) {
+                                        console.log(`Note ${actualIndex}: selected=${isSelected}, dragging=${isBeingDragged}, dragActive=${drag.active}`);
+                                      }
+                                  
+                                  const noteName = getNoteFromPitch(midiNumber);
+                                  
+                                  // Note colors: white border, blue fill with velocity-based alpha
+                                  const whiteBorder = '#ffffff';
+                                  const blueFill = `rgba(74, 144, 226, ${Math.max(0.4, note.velocity)})`; // Blue with velocity alpha (min 0.4 for visibility)
+                                  
+                                  let noteColor = blueFill;
+                                  let borderColor = whiteBorder;
+                                  let borderWidth = '1px';
+                                  
+                                  if (isSelected) {
+                                    noteColor = '#e0e0e0'; // Light grey when selected
+                                    borderColor = '#999999';
+                                    borderWidth = '2px';
                                   }
                                   
-                                  // Map MIDI notes 0-127 to clip height (60px usable height, leaving space for clip name)
-                                  const noteHeight = 4;
-                                  const clipUsableHeight = 50; // 68px total - 18px for clip name
-                                  const noteTop = 18 + (clipUsableHeight - ((pitchNumber - 48) / 32) * clipUsableHeight) - noteHeight / 2;
-                                  
-                                  const drag = noteDragging();
-                                  const isBeingDragged = drag.active && drag.clipId === clip.id && drag.noteIndex === noteIndex();
+                                  // Remove yellow dragging mode - keep selected state during drag
                                   
                                   return (
                                     <div
-                                      class={`clip-note ${isBeingDragged ? 'dragging' : ''}`}
+                                      class={`piano-note ${isBeingDragged ? 'dragging' : ''} ${isSelected ? 'selected' : ''}`}
                                       style={`
                                         left: ${noteLeft}px;
-                                        top: ${Math.max(18, Math.min(noteTop, 64))}px;
+                                        top: ${noteY + 1}px;
                                         width: ${noteWidth}px;
                                         height: ${noteHeight}px;
-                                        background-color: ${isBeingDragged ? '#ff6b6b' : '#4dabf7'};
-                                        border: 1px solid ${isBeingDragged ? '#ff5252' : '#339af0'};
-                                        cursor: ${isBeingDragged ? 'grabbing' : 'grab'};
-                                        opacity: ${note.velocity};
+                                        background-color: ${noteColor};
+                                        border: ${borderWidth} solid ${borderColor};
                                       `}
-                                      onMouseDown={(e) => handleNoteMouseDown(e, clip, noteIndex())}
-                                      title={`${typeof note.note === 'string' ? note.note : getNoteFromPitch(note.note)} - Time: ${note.time.toFixed(2)} - Duration: ${note.duration.toFixed(2)} - Velocity: ${note.velocity.toFixed(2)}`}
+                                      onMouseDown={(e) => {
+                                        handleNoteMouseDown(e, clip, actualIndex);
+                                      }}
+                                      title={`${noteName} - ${note.time.toFixed(2)}s - ${note.duration.toFixed(2)}s - vel:${(note.velocity * 127).toFixed(0)}`}
                                     >
-                                      <div class="note-start-handle"></div>
-                                      <div class="note-end-handle"></div>
-                                    </div>
-                                  );
-                                }}
-                              </For>
+                                      <Show when={isSelected && noteWidth > 20}>
+                                        <span class="note-text">{noteName}</span>
+                                      </Show>
+                                      <Show when={isSelected && noteWidth > 20}>
+                                        <div 
+                                          class="note-resize-handle left"
+                                          onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            handleResizeMouseDown(e, clip, actualIndex, 'start');
+                                          }}
+                                        ></div>
+                                        <div 
+                                          class="note-resize-handle right"
+                                          onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            handleResizeMouseDown(e, clip, actualIndex, 'end');
+                                          }}
+                                        ></div>
+                                      </Show>
+                                      </div>
+                                    );
+                                  }}
+                                  </For>
+                                );
+                              })()}
                             </div>
                           </Show>
-                        </div>
-                      )}
-                    </For>
+                        )}
+                      </For>
+                    </div>
                   </div>
-                </div>
-              </DropZone>
-            )}
+                </DropZone>
+              );
+            }}
           </For>
         </div>
       </div>
@@ -917,6 +1349,11 @@ export const TrackArea: Component = () => {
           }
         </div>
       </Show>
+      
+      <PianoRoll 
+        clip={pianoRollOpen()}
+        onClose={() => setPianoRollOpen(null)}
+      />
     </div>
   );
 };
@@ -937,6 +1374,63 @@ style.textContent = `
   border-bottom: 1px solid var(--border-color);
 }
 
+.global-attributes {
+  display: flex;
+  height: 30px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.global-attrs-spacer {
+  width: 250px;
+  background: var(--bg-quaternary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 6px 15px;
+  box-sizing: border-box;
+  transition: width 0.3s ease;
+}
+
+.global-attrs-spacer.collapsed {
+  width: 50px;
+  padding: 6px 8px;
+}
+
+.bpm-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.attr-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.attr-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  min-width: 40px;
+  text-align: center;
+}
+
+.global-attrs-timeline {
+  flex: 1;
+  background: var(--bg-secondary);
+  position: relative;
+}
+
+.tempo-track {
+  height: 100%;
+  position: relative;
+}
+
 .track-header-spacer {
   width: 250px;
   background: var(--bg-quaternary);
@@ -946,6 +1440,16 @@ style.textContent = `
   align-items: center;
   padding: 12px 15px;
   box-sizing: border-box;
+  transition: width 0.3s ease;
+}
+
+.track-header-spacer.collapsed {
+  width: 50px;
+  padding: 12px 8px;
+}
+
+.track-header-spacer.collapsed h3 {
+  display: none;
 }
 
 .track-header-spacer h3 {
@@ -965,6 +1469,27 @@ style.textContent = `
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.3s ease;
+}
+
+.track-sidebar.collapsed {
+  width: 50px;
+}
+
+
+.sidebar-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .tracks-container {
@@ -973,6 +1498,7 @@ style.textContent = `
   background: var(--bg-primary);
   position: relative;
 }
+
 
 .track-header {
   display: flex;
@@ -1025,14 +1551,29 @@ style.textContent = `
 }
 
 .track-item {
-  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  height: 70px;
   box-sizing: border-box;
   justify-content: center;
+  transition: height 0.2s ease;
+  position: relative;
+}
+
+.track-item-content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  justify-content: center;
+}
+
+.track-color-indicator {
+  width: 20px;
+  height: 80%;
+  border-radius: 3px;
+  margin: auto;
 }
 
 .track-name {
@@ -1251,11 +1792,20 @@ style.textContent = `
 }
 
 .track-lane {
-  height: 70px;
   border-bottom: 1px solid var(--border-color);
   position: relative;
   background: linear-gradient(90deg, transparent 0%, transparent calc(var(--timeline-scale, 200px) - 1px), var(--bg-secondary) calc(var(--timeline-scale, 200px) - 1px), var(--bg-secondary) var(--timeline-scale, 200px));
   background-size: var(--timeline-scale, 200px) 100%;
+  min-height: 70px;
+  transition: height 0.2s ease;
+}
+
+.track-lane.compact {
+  background: var(--bg-primary);
+}
+
+.track-lane.expanded {
+  background: var(--bg-primary);
 }
 
 .track-clips {
@@ -1287,7 +1837,7 @@ style.textContent = `
   width: 2px;
   height: 100%;
   background: var(--accent-primary);
-  z-index: 1000;
+  z-index: 1200;
   pointer-events: none;
 }
 
@@ -1297,7 +1847,7 @@ style.textContent = `
   width: 2px;
   height: 100%;
   background: var(--accent-primary);
-  z-index: 1000;
+  z-index: 1200;
   pointer-events: none;
 }
 
@@ -1373,70 +1923,225 @@ style.textContent = `
   min-height: 1px;
 }
 
-/* Note editing styles */
-.clip-notes {
-  position: relative;
+/* Legacy CSS removed - now using adaptive piano roll */
+
+/* Adaptive Piano Roll Styles */
+.track-piano-background {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
   pointer-events: none;
 }
 
-.clip-note {
+.piano-line {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+
+.piano-line.black-key {
+  background: rgba(0, 0, 0, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.piano-line.white-key {
+  background: transparent;
+}
+
+.note-name {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  user-select: none;
+  opacity: 0.7;
+}
+
+.midi-clip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: all;
+}
+
+.audio-clip {
+  position: absolute;
+  z-index: 5;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  cursor: grab;
+}
+
+.audio-clip:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.clip-boundary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  border-radius: 4px 4px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  opacity: 0.9;
+  backdrop-filter: blur(1px);
+}
+
+.clip-boundary .clip-name {
+  font-size: 0.75rem;
+  color: white;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.piano-note {
   position: absolute;
   background: #4dabf7;
   border: 1px solid #339af0;
-  border-radius: 2px;
-  pointer-events: all;
-  min-width: 8px;
+  border-radius: 3px;
+  cursor: grab;
+  z-index: 10;
+  transition: all 0.1s ease;
+  min-height: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
   box-sizing: border-box;
+}
+
+.piano-note:hover {
+  background: #74c0fc;
+  border-color: #4dabf7;
+  z-index: 15;
+  transform: scale(1.02);
+}
+
+.piano-note.dragging {
+  background: #ffd43b;
+  border-color: #fcc419;
   z-index: 20;
-  transition: background-color 0.1s ease;
+  cursor: grabbing;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.clip-note:hover {
-  background-color: #74c0fc !important;
-  border-color: #4dabf7 !important;
+.track-btn.expand {
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.clip-note.dragging {
-  background-color: #ff6b6b !important;
-  border-color: #ff5252 !important;
-  z-index: 30;
+.track-btn.expand:hover {
+  background: var(--bg-secondary);
 }
 
-.note-start-handle, .note-end-handle {
+.track-btn.expand.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.note-text {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.piano-line {
+  border-bottom: none !important; /* Remove duplicate border */
+}
+
+.note-resize-handle {
   position: absolute;
   top: 0;
   width: 4px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.1);
+  background: transparent;
   cursor: ew-resize;
-  z-index: 25;
-  transition: background-color 0.1s ease;
+  z-index: 15;
+  border-radius: 2px;
+  transition: all 0.1s ease;
 }
 
-.note-start-handle {
+.note-resize-handle.left {
   left: 0;
-  border-radius: 2px 0 0 2px;
+  border-radius: 3px 0 0 3px;
 }
 
-.note-end-handle {
+.note-resize-handle.right {
   right: 0;
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 3px 3px 0;
 }
 
-.note-start-handle:hover, .note-end-handle:hover {
-  background: rgba(255, 255, 255, 0.5) !important;
+.note-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.4);
+  width: 6px;
 }
 
-.clip-note:hover .note-start-handle,
-.clip-note:hover .note-end-handle {
-  background: rgba(255, 255, 255, 0.3);
+.piano-note.selected .note-resize-handle {
+  background: rgba(153, 153, 153, 0.6);
+  width: 8px;
+  border: 1px solid #666666;
 }
 
-.clip-note.dragging .note-start-handle,
-.clip-note.dragging .note-end-handle {
-  background: rgba(255, 255, 255, 0.6);
+.piano-note.selected .note-resize-handle.left {
+  left: -2px;
+  border-right: 2px solid #666666;
+  background: rgba(153, 153, 153, 0.8);
 }
+
+.piano-note.selected .note-resize-handle.right {
+  right: -2px;
+  border-left: 2px solid #666666;
+  background: rgba(153, 153, 153, 0.8);
+}
+
+.piano-note.selected .note-resize-handle:hover {
+  background: rgba(153, 153, 153, 1);
+  width: 10px;
+}
+
+.piano-note.selected {
+  position: relative;
+  z-index: 20;
+}
+
+.new-track-btn {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.new-track-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Remove old rule since we now hide the button completely when collapsed */
 `;
 document.head.appendChild(style);
