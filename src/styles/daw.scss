@@ -1,0 +1,140 @@
+// DAW Logic Pro X theme variables
+$logic-bg: #1a1a1a;
+$logic-panel: #2a2a2a;
+$logic-border: #404040;
+$logic-text: #e0e0e0;
+$logic-text-muted: #a0a0a0;
+$logic-accent: #007aff;
+$logic-track: #333333;
+$logic-note: #4a90e2;
+
+// Override Bulma variables
+$dark: $logic-bg;
+$dark-invert: $logic-text;
+$grey-darker: $logic-panel;
+$grey-dark: $logic-track;
+$border: $logic-border;
+$primary: $logic-accent;
+$info: $logic-note;
+
+// Set the theme as dark by default
+$scheme-main: $dark;
+$scheme-invert: $dark-invert;
+$text: $logic-text;
+$text-weak: $logic-text-muted;
+$background: $dark;
+$surface: $grey-darker;
+$border-weak: $border;
+
+// Import Bulma
+@import "bulma/bulma";
+
+// JMON Editor slide-in animation
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Custom DAW components
+.daw-container {
+  background-color: $logic-bg;
+  color: $logic-text;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.daw-panel {
+  background-color: $logic-panel !important;
+  border-color: $logic-border !important;
+}
+
+.daw-track {
+  background-color: $logic-track !important;
+}
+
+.daw-note {
+  background-color: $logic-note !important;
+  color: white !important;
+  border: 1px solid darken($logic-note, 10%);
+  border-radius: 3px;
+}
+
+.daw-transport {
+  background-color: $logic-panel;
+  border-bottom: 1px solid $logic-border;
+  padding: 1rem;
+}
+
+.daw-sidebar {
+  background-color: $logic-panel;
+  border-color: $logic-border;
+}
+
+.daw-timeline {
+  background-color: $logic-bg;
+}
+
+.daw-ruler {
+  background-color: $logic-panel;
+  border-bottom: 1px solid $logic-border;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+// Piano roll styles
+.piano-key {
+  border-bottom: 1px solid $logic-border;
+  position: relative;
+  
+  &.black-key {
+    background-color: darken($logic-track, 5%);
+  }
+  
+  &.white-key {
+    background-color: $logic-track;
+  }
+  
+  .note-name {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.25rem;
+    color: $logic-text-muted;
+    font-size: 0.75rem;
+  }
+}
+
+// Custom scrollbars
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $logic-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $logic-border;
+  border-radius: 4px;
+  
+  &:hover {
+    background: lighten($logic-border, 10%);
+  }
+}
+
+// Hide number input spinners
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "jmon-daw",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@iconify/iconify": "^3.1.1",
+    "@solidjs/router": "^0.15.3",
+    "bulma": "^1.0.4",
+    "lucide-solid": "^0.525.0",
+    "postcss": "^8.5.6",
+    "sass": "^1.89.2",
+    "solid-js": "^1.9.7",
+    "tone": "^15.1.22",
+    "vite": "^6.3.5",
+    "vite-plugin-solid": "^2.11.7"
+  }
+}

@@ -1,0 +1,1079 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JMON Composition (Multi-Track, Extended)",
+  "description": "A declarative music format supporting synthesis, MIDI, score notation, key changes, arbitrary metadata, annotations, and custom presets.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "bpm",
+    "audioGraph",
+    "connections",
+    "sequences"
+  ],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "jmonTone",
+      "description": "The format identifier for the JMON schema."
+    },
+    "version": {
+      "type": "string",
+      "description": "JMON schema version."
+    },
+    "bpm": {
+      "type": "number",
+      "minimum": 20,
+      "maximum": 400,
+      "description": "Tempo in beats per minute."
+    },
+    "keySignature": {
+      "type": "string",
+      "pattern": "^[A-G](#|b)?m?$",
+      "description": "Key signature (e.g., 'C', 'Am', 'F#')."
+    },
+    "keySignatureMap": {
+      "type": "array",
+      "description": "Map of key signature changes over time.",
+      "items": {
+        "type": "object",
+        "required": ["time", "keySignature"],
+        "properties": {
+          "time": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" }
+            ],
+            "description": "Time of the key signature change."
+          },
+          "keySignature": {
+            "type": "string",
+            "pattern": "^[A-G](#|b)?m?$",
+            "description": "New key signature at this time."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "timeSignature": {
+      "type": "string",
+      "pattern": "^\\d+/\\d+$",
+      "description": "Time signature for the composition (e.g., '4/4')."
+    },
+    "tempoMap": {
+      "type": "array",
+      "description": "Map of tempo changes over time.",
+      "items": {
+        "type": "object",
+        "required": ["time", "bpm"],
+        "properties": {
+          "time": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" }
+            ],
+            "description": "The time point for the tempo change."
+          },
+          "bpm": {
+            "type": "number",
+            "minimum": 20,
+            "maximum": 400,
+            "description": "Tempo in beats per minute at this time point."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "transport": {
+      "type": "object",
+      "description": "Settings controlling global playback and looping.",
+      "properties": {
+        "startOffset": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" }
+          ],
+          "description": "Offset for when playback should start."
+        },
+        "globalLoop": {
+          "type": "boolean",
+          "description": "Whether the entire project should loop."
+        },
+        "globalLoopEnd": {
+          "type": "string",
+          "description": "Where (in time) the global loop should end."
+        },
+        "swing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Swing amount (0-1)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Metadata for the composition, allowing arbitrary fields.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the composition."
+        },
+        "author": {
+          "type": "string",
+          "description": "Author or composer."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the composition."
+        }
+      },
+      "additionalProperties": true
+    },
+    "customPresets": {
+      "type": "array",
+      "description": "Array of custom user-defined presets for synths or effects.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "options"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this preset."
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of preset (e.g., 'Synth', 'Effect', 'Sampler')."
+          },
+          "options": {
+            "type": "object",
+            "description": "Preset options."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "audioGraph": {
+      "type": "array",
+      "description": "Audio node graph for synthesis.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "options"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this node."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Synth", "PolySynth", "MonoSynth", "AMSynth", "FMSynth", "DuoSynth", "PluckSynth", "NoiseSynth", "Sampler", "Filter", "AutoFilter", "Reverb", "FeedbackDelay", "PingPongDelay", "Delay", "Chorus", "Phaser", "Tremolo", "Vibrato", "AutoWah", "Distortion", "Chebyshev", "BitCrusher", "Compressor", "Limiter", "Gate", "FrequencyShifter", "PitchShift", "JCReverb", "Freeverb", "StereoWidener", "MidSideCompressor", "Destination"],
+            "description": "Type of audio node (Synth, Sampler, Effect, etc.)."
+          },
+          "options": {
+            "type": "object",
+            "description": "Options for this node. Content varies by node type."
+          },
+          "target": {
+            "type": "string",
+            "description": "Target node for audio routing."
+          },
+          "presetRef": {
+            "type": "string",
+            "description": "Reference to a custom preset."
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "Sampler"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "urls": {
+                      "type": "object",
+                      "description": "Sample URLs for Sampler nodes (note -> file path mapping)",
+                      "patternProperties": {
+                        "^[A-G](#|b)?[0-8]$": {
+                          "type": "string",
+                          "description": "File path to sample for this note"
+                        }
+                      }
+                    },
+                    "envelope": {
+                      "type": "object",
+                      "description": "Automatic envelope for Samplers to smooth attack/release",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Whether to apply automatic envelope"
+                        },
+                        "attack": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 2,
+                          "default": 0.02,
+                          "description": "Attack time in seconds"
+                        },
+                        "decay": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 2,
+                          "default": 0.1,
+                          "description": "Decay time in seconds"
+                        },
+                        "sustain": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0.8,
+                          "description": "Sustain level (0-1)"
+                        },
+                        "release": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 5,
+                          "default": 0.3,
+                          "description": "Release time in seconds"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Synth", "PolySynth", "MonoSynth", "AMSynth", "FMSynth", "DuoSynth", "PluckSynth", "NoiseSynth"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "oscillator": {
+                      "type": "object",
+                      "description": "Oscillator settings for synths"
+                    },
+                    "envelope": {
+                      "type": "object",
+                      "description": "ADSR envelope settings for synths"
+                    },
+                    "filter": {
+                      "type": "object",
+                      "description": "Filter settings for synths"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Reverb", "JCReverb", "Freeverb"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "roomSize": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.7,
+                      "description": "Room size for reverb effects"
+                    },
+                    "dampening": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.3,
+                      "description": "Dampening for reverb effects"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Delay", "FeedbackDelay", "PingPongDelay"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "delayTime": {
+                      "type": "string",
+                      "default": "8n",
+                      "description": "Delay time (note values like '8n' or seconds)"
+                    },
+                    "feedback": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 0.95,
+                      "default": 0.4,
+                      "description": "Feedback amount for delay effects"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Filter", "AutoFilter"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "frequency": {
+                      "type": "number",
+                      "minimum": 20,
+                      "maximum": 20000,
+                      "default": 1000,
+                      "description": "Filter frequency"
+                    },
+                    "Q": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 50,
+                      "default": 1,
+                      "description": "Filter Q/resonance"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["lowpass", "highpass", "bandpass", "notch"],
+                      "default": "lowpass",
+                      "description": "Filter type"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Chorus", "Phaser"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "depth": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Modulation depth"
+                    },
+                    "rate": {
+                      "type": "string",
+                      "default": "4n",
+                      "description": "Modulation rate (note values or Hz)"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Compressor", "Limiter", "Gate"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "threshold": {
+                      "type": "number",
+                      "minimum": -60,
+                      "maximum": 0,
+                      "default": -24,
+                      "description": "Threshold in dB"
+                    },
+                    "ratio": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 20,
+                      "default": 4,
+                      "description": "Compression ratio"
+                    },
+                    "attack": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.003,
+                      "description": "Attack time for compressor/gate"
+                    },
+                    "release": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.1,
+                      "description": "Release time for compressor/gate"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["Distortion", "Chebyshev"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "distortion": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.4,
+                      "description": "Distortion amount"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "BitCrusher"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "bits": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 16,
+                      "default": 4,
+                      "description": "Bit depth for BitCrusher"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "Tremolo"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "wet": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 1,
+                      "description": "Wet/dry mix (0=dry, 1=wet)"
+                    },
+                    "frequency": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 20,
+                      "default": 4,
+                      "description": "Tremolo frequency in Hz"
+                    },
+                    "depth": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5,
+                      "description": "Tremolo depth"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "Destination"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "connections": {
+      "type": "array",
+      "description": "Array of audio graph connections. Each is a two-element array [source, target].",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "sequences": {
+      "type": "array",
+      "description": "Musical sequences (tracks or parts).",
+      "items": {
+        "type": "object",
+        "required": ["label", "notes"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Label for this sequence (e.g., 'lead', 'bass', etc.)."
+          },
+          "midiChannel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 15,
+            "description": "Default MIDI channel for this sequence (0-15)."
+          },
+          "synth": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["Synth", "PolySynth", "MonoSynth", "AMSynth", "FMSynth", "DuoSynth", "PluckSynth", "NoiseSynth", "Sampler"],
+                "description": "Type of synthesizer (Synth, Sampler, AMSynth, FMSynth, etc.)."
+              },
+              "options": {
+                "type": "object",
+                "description": "Synthesizer options."
+              },
+              "presetRef": {
+                "type": "string",
+                "description": "Reference to a custom preset."
+              },
+              "modulationTarget": {
+                "type": "string",
+                "enum": ["vibrato", "tremolo", "glissando", "filter"],
+                "description": "Target for modulation wheel (CC1) control. Determines how modulation wheel affects the synth."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Synthesizer definition for this sequence."
+          },
+          "synthRef": {
+            "type": "string",
+            "description": "Reference to an audioGraph node to use as the synth."
+          },
+          "notes": {
+            "type": "array",
+            "description": "Array of note events.",
+            "items": {
+              "type": "object",
+              "required": ["note", "time", "duration"],
+              "properties": {
+                "note": {
+                  "oneOf": [
+                    { "type": "string", "description": "Note name (e.g., 'C4', 'G#3')." },
+                    { "type": "number", "description": "MIDI note number." },
+                    {
+                      "type": "array",
+                      "description": "Chord (array of note names or MIDI numbers).",
+                      "items": {
+                        "oneOf": [
+                          { "type": "string" },
+                          { "type": "number" }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "time": {
+                  "oneOf": [
+                    { "type": "string", "description": "Musical time (e.g., '0:2:0', '4n')." },
+                    { "type": "number", "description": "Absolute time in seconds." }
+                  ]
+                },
+                "duration": {
+                  "oneOf": [
+                    { "type": "string", "description": "Musical duration (e.g., '8n', '1:0:0')." },
+                    { "type": "number", "description": "Duration in seconds." }
+                  ]
+                },
+                "velocity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Note velocity (0-1)."
+                },
+                "articulation": {
+                  "type": "string",
+                  "description": "Articulation (e.g., 'staccato', 'accent')."
+                },
+                "microtuning": {
+                  "type": "number",
+                  "description": "Microtuning adjustment in semitones."
+                },
+                "channel": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 15,
+                  "description": "Override sequence MIDI channel for this note (0-15)."
+                },
+                "modulations": {
+                  "type": "array",
+                  "description": "Per-note modulation events (CC, pitch bend, aftertouch).",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "value", "time"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["cc", "pitchBend", "aftertouch"],
+                        "description": "Type of MIDI modulation event."
+                      },
+                      "controller": {
+                        "type": "integer",
+                        "description": "MIDI CC number (required for type: 'cc')."
+                      },
+                      "value": {
+                        "type": "number",
+                        "description": "Value for this modulation: 0-127 for CC, -8192 to +8192 for pitchBend (14-bit, maps to ±2 semitones), 0-127 for aftertouch."
+                      },
+                      "time": {
+                        "oneOf": [
+                          { "type": "string", "description": "Relative time (e.g., '8n')." },
+                          { "type": "number", "description": "Relative time in seconds." }
+                        ],
+                        "description": "When this modulation event happens (relative to note start)."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "loop": {
+            "oneOf": [
+              { "type": "boolean" },
+              { "type": "string" }
+            ],
+            "description": "Whether this sequence loops, or string for musical duration."
+          },
+          "loopEnd": {
+            "type": "string",
+            "description": "Time (musical or seconds) to end the loop."
+          },
+          "effects": {
+            "type": "array",
+            "description": "Sequence-level effects.",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of effect (e.g., 'Reverb', 'Delay')."
+                },
+                "options": {
+                  "type": "object",
+                  "description": "Options for this effect."
+                },
+                "presetRef": {
+                  "type": "string",
+                  "description": "Reference to a custom preset."
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "automation": {
+      "type": "array",
+      "description": "Automation events for parameters, including synth, effect, or MIDI modulation.",
+      "items": {
+        "type": "object",
+        "required": [ "target", "time", "value" ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Parameter to automate, e.g., 'synth.frequency', 'effect.mix', 'midi.cc1', 'midi.pitchBend', 'midi.aftertouch'."
+          },
+          "time": {
+            "oneOf": [
+              { "type": "string", "description": "Musical time (e.g., '2:1:0')." },
+              { "type": "number", "description": "Absolute time in seconds." }
+            ]
+          },
+          "value": {
+            "type": "number",
+            "description": "Target value for the parameter."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "description": "Annotations (e.g., lyrics, rehearsal marks, comments) in the composition.",
+      "items": {
+        "type": "object",
+        "required": ["text", "time"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Annotation text (e.g., lyric, instruction, label)."
+          },
+          "time": {
+            "oneOf": [
+              { "type": "string", "description": "Musical time (e.g., '1:2:0')." },
+              { "type": "number", "description": "Absolute time in seconds." }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of annotation (e.g., 'lyric', 'marker', 'comment', 'rehearsal')."
+          },
+          "duration": {
+            "oneOf": [
+              { "type": "string", "description": "Musical duration." },
+              { "type": "number", "description": "Duration in seconds." }
+            ],
+            "description": "Optional duration for annotation (e.g., for lyrics or extended comments)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "timeSignatureMap": {
+      "type": "array",
+      "description": "Map of time signature changes over time.",
+      "items": {
+        "type": "object",
+        "required": ["time", "timeSignature"],
+        "properties": {
+          "time": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" }
+            ],
+            "description": "Time of the time signature change."
+          },
+          "timeSignature": {
+            "type": "string",
+            "pattern": "^\\d+/\\d+$",
+            "description": "New time signature at this time."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "synthConfig": {
+      "type": "object",
+      "description": "Global synthesizer configuration that applies to all sequences unless overridden.",
+      "properties": {
+        "type": {
+          "type": "string", 
+          "enum": ["Synth", "PolySynth", "MonoSynth", "AMSynth", "FMSynth", "DuoSynth", "PluckSynth", "NoiseSynth", "Sampler"],
+          "description": "Default synthesizer type (Synth, Sampler, AMSynth, FMSynth, etc.)."
+        },
+        "modulationTarget": {
+          "type": "string",
+          "enum": ["vibrato", "tremolo", "glissando", "filter"],
+          "description": "Default target for modulation wheel (CC1) control across all sequences."
+        },
+        "options": {
+          "type": "object",
+          "description": "Default synthesizer options applied globally.",
+          "properties": {
+            "envelope": {
+              "type": "object",
+              "description": "Automatic envelope settings for Samplers to avoid abrupt cuts",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether to apply automatic envelope to Samplers"
+                },
+                "attack": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2,
+                  "default": 0.02,
+                  "description": "Attack time in seconds"
+                },
+                "decay": {
+                  "type": "number", 
+                  "minimum": 0,
+                  "maximum": 2,
+                  "default": 0.1,
+                  "description": "Decay time in seconds"
+                },
+                "sustain": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.8,
+                  "description": "Sustain level (0-1)"
+                },
+                "release": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 5,
+                  "default": 0.3,
+                  "description": "Release time in seconds"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "converterHints": {
+      "type": "object",
+      "description": "Optional hints to guide specific converters.",
+      "properties": {
+        "tone": {
+          "type": "object",
+          "description": "Hints for jmon-tone.js converter.",
+          "patternProperties": {
+            "^cc[0-9]+$": {
+              "type": "object",
+              "description": "Hint configuration for a MIDI CC controller mapping.",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "description": "Target for this CC mapping - can be legacy target (filter, vibrato, tremolo, glissando) or specific effect node ID from audioGraph."
+                },
+                "parameter": {
+                  "type": "string",
+                  "description": "Parameter name to control on the target effect (e.g., 'frequency', 'depth', 'Q')."
+                },
+                "frequency": {
+                  "type": "number",
+                  "description": "Modulation rate in Hz (for vibrato/tremolo)."
+                },
+                "depthRange": {
+                  "type": "array",
+                  "description": "Min/max depth or frequency range for the parameter.",
+                  "items": { "type": "number" },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "required": ["target"],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "midi": {
+          "type": "object",
+          "description": "Hints for jmon-midi.js converter.",
+          "properties": {
+            "channel": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 15,
+              "description": "Default MIDI channel for outgoing messages."
+            },
+            "port": {
+              "type": "string",
+              "description": "MIDI port name or identifier."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "description": "Basic modulation example with pitch bend and modulation wheel",
+      "composition": {
+        "format": "jmonTone",
+        "version": "1.0",
+        "bpm": 120,
+        "synthConfig": {
+          "type": "Synth",
+          "modulationTarget": "filter"
+        },
+        "audioGraph": [
+          { "id": "master", "type": "Destination", "options": {} }
+        ],
+        "connections": [],
+        "sequences": [{
+          "label": "Modulation Demo",
+          "notes": [
+            {
+              "note": "C4",
+              "time": 0,
+              "duration": 2,
+              "velocity": 0.8,
+              "modulations": [
+                { "type": "pitchBend", "value": -4096, "time": 0 },
+                { "type": "pitchBend", "value": 4096, "time": 1.5 }
+              ]
+            },
+            {
+              "note": "G4",
+              "time": 2,
+              "duration": 2,
+              "velocity": 0.8,
+              "modulations": [
+                { "type": "cc", "controller": 1, "value": 0, "time": 0 },
+                { "type": "cc", "controller": 1, "value": 127, "time": 1.5 }
+              ]
+            }
+          ]
+        }]
+      }
+    },
+    {
+      "description": "Vibrato modulation example",
+      "composition": {
+        "format": "jmonTone",
+        "version": "1.0", 
+        "bpm": 120,
+        "audioGraph": [
+          { "id": "master", "type": "Destination", "options": {} }
+        ],
+        "connections": [],
+        "sequences": [{
+          "label": "Vibrato Demo",
+          "synth": {
+            "type": "Synth",
+            "modulationTarget": "vibrato"
+          },
+          "notes": [{
+            "note": "A4",
+            "time": 0,
+            "duration": 4,
+            "velocity": 0.8,
+            "modulations": [
+              { "type": "cc", "controller": 1, "value": 0, "time": 0 },
+              { "type": "cc", "controller": 1, "value": 127, "time": 3 }
+            ]
+          }]
+        }]
+      }
+    }
+  ]
+}
