@@ -11,7 +11,6 @@ const [isLooping, setIsLooping] = createSignal(false);
 const [loopStart, setLoopStart] = createSignal(0);
 const [loopEnd, setLoopEnd] = createSignal(16);
 const [timelineZoom, setTimelineZoom] = createSignal(1);
-const [verticalZoom, setVerticalZoom] = createSignal(1);
 const [timelineScroll, setTimelineScroll] = createSignal(0);
 const [snapEnabled, setSnapEnabled] = createSignal(true);
 const [snapValue, setSnapValue] = createSignal('1/16');
@@ -72,7 +71,6 @@ export const dawStore = {
   get loopStart() { return loopStart(); },
   get loopEnd() { return loopEnd(); },
   get timelineZoom() { return timelineZoom(); },
-  get verticalZoom() { return verticalZoom(); },
   get timelineScroll() { return timelineScroll(); },
   get snapEnabled() { return snapEnabled(); },
   get snapValue() { return snapValue(); },
@@ -125,7 +123,9 @@ export const dawStore = {
       notes: [],
       synthType: 'Synth',
       synthOptions: {},
-      effects: []
+      effects: [],
+      verticalZoom: 2.5,
+      verticalScroll: 0
     };
     
     const newSequence = {
@@ -243,7 +243,9 @@ export const dawStore = {
       notes: seq.notes || [],
       synthType: seq.synth?.type || 'Synth',
       synthOptions: seq.synth?.options || {},
-      effects: seq.effects || []
+      effects: seq.effects || [],
+      verticalZoom: 2.5,
+      verticalScroll: 0
     }));
     
     setTracks(syncedTracks);
@@ -274,7 +276,9 @@ export const dawStore = {
       synthType: seq.synth?.type || 'Synth',
       synthOptions: seq.synth?.options || {},
       effects: seq.effects || [],
-      height: 150
+      height: 150,
+      verticalZoom: 2.5,
+      verticalScroll: 0
     }));
     
     setTracks(demoTracks);
@@ -286,11 +290,23 @@ export const dawStore = {
     if (!audioEngine.isInitialized) {
       await audioEngine.init();
       audioEngine.buildAudioGraph(jmonData);
+      audioEngine.setBpm(bpm());
     }
     
-    // Schedule all sequences
+    // Always clear and re-schedule all sequences to ensure audio works after pause
+    audioEngine.clear();
+    
+    // Set playback position from current time
+    const currentTimeValue = currentTime();
+    const bars = Math.floor(currentTimeValue);
+    const beats = Math.floor((currentTimeValue - bars) * 4);
+    const ticks = Math.floor(((currentTimeValue - bars) * 4 - beats) * 480);
+    audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+    
+    console.log('🎵 Scheduling sequences for playback from position:', `${bars}:${beats}:${ticks}`);
     jmonData.sequences.forEach((sequence, index) => {
       audioEngine.scheduleSequence(sequence, index);
+      console.log(`🎵 Scheduled sequence ${index}: ${sequence.label} with ${sequence.notes?.length || 0} notes`);
     });
     
     audioEngine.play();
@@ -327,12 +343,9 @@ export const dawStore = {
 
   // Timeline controls
   setTimelineZoom: (zoom) => setTimelineZoom(Math.max(0.1, Math.min(5, zoom))),
-  setVerticalZoom: (zoom) => setVerticalZoom(Math.max(0.5, Math.min(3, zoom))),
   setTimelineScroll: (scroll) => setTimelineScroll(Math.max(0, scroll)),
   zoomIn: () => setTimelineZoom(Math.min(5, timelineZoom() * 1.2)),
-  zoomOut: () => setTimelineZoom(Math.max(0.1, timelineZoom() / 1.2)),
-  verticalZoomIn: () => setVerticalZoom(Math.min(3, verticalZoom() * 1.2)),
-  verticalZoomOut: () => setVerticalZoom(Math.max(0.5, verticalZoom() / 1.2))
+  zoomOut: () => setTimelineZoom(Math.max(0.1, timelineZoom() / 1.2))
 };
 
 // Export a hook-like function for compatibility

@@ -1,6 +1,7 @@
 import { dawStore } from '../stores/dawStore';
 import { audioEngine } from './audioEngine';
 import { createEffect } from 'solid-js';
+import * as Tone from 'tone';
 
 class KeyboardHandler {
   constructor() {
@@ -134,6 +135,16 @@ class KeyboardHandler {
         e.preventDefault();
         this.handleDeselectAll();
         break;
+        
+      case 'Home':
+        e.preventDefault();
+        this.handleGoToStart();
+        break;
+        
+      case 'End':
+        e.preventDefault();
+        this.handleGoToEnd();
+        break;
     }
   }
 
@@ -143,21 +154,35 @@ class KeyboardHandler {
 
   async handlePlayPause() {
     if (!this.store.isPlaying) {
-      await audioEngine.init();
-      audioEngine.setBpm(this.store.bpm);
-      
-      // Schedule all tracks
-      this.store.tracks.forEach(track => {
-        if (track.notes && track.notes.length > 0) {
-          const synthId = audioEngine.createSynth(track.synthType, track.synthOptions);
-          const sequence = { notes: track.notes };
-          audioEngine.scheduleSequence(sequence, synthId);
+      try {
+        // Initialize audio engine if needed
+        if (!audioEngine.isInitialized) {
+          await audioEngine.init();
+          audioEngine.buildAudioGraph(this.store.jmonData);
+          audioEngine.setBpm(this.store.bpm);
         }
-      });
-      
-      audioEngine.play();
-      this.store.setPlaying(true);
+        
+        // Always clear and reschedule to ensure all notes play from current position
+        audioEngine.clear();
+        
+        // Set playback position
+        const bars = Math.floor(this.store.currentTime);
+        const beats = Math.floor((this.store.currentTime - bars) * 4);
+        const ticks = Math.floor(((this.store.currentTime - bars) * 4 - beats) * 480);
+        audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+        
+        // Re-schedule all sequences from current position
+        this.store.jmonData.sequences.forEach((sequence, index) => {
+          audioEngine.scheduleSequence(sequence, index);
+        });
+        
+        audioEngine.play();
+        this.store.setPlaying(true);
+      } catch (error) {
+        console.error('Keyboard play failed:', error);
+      }
     } else {
+      // Pause but don't clear sequences - just stop the transport
       audioEngine.pause();
       this.store.setPlaying(false);
     }
@@ -165,7 +190,7 @@ class KeyboardHandler {
 
   handleStop() {
     audioEngine.stop();
-    audioEngine.clearAll();
+    audioEngine.clear();
     this.store.setPlaying(false);
     this.store.setCurrentTime(0);
   }
@@ -174,14 +199,24 @@ class KeyboardHandler {
     const step = largeStep ? 1 : 0.25; // 1 bar or 1 beat
     const newTime = Math.max(0, this.store.currentTime - step);
     this.store.setCurrentTime(newTime);
-    audioEngine.setPosition(`${newTime}:0:0`);
+    if (audioEngine.isInitialized) {
+      const bars = Math.floor(newTime);
+      const beats = Math.floor((newTime - bars) * 4);
+      const ticks = Math.floor(((newTime - bars) * 4 - beats) * 480);
+      audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+    }
   }
 
   handleSeekForward(largeStep = false) {
     const step = largeStep ? 1 : 0.25; // 1 bar or 1 beat
     const newTime = this.store.currentTime + step;
     this.store.setCurrentTime(newTime);
-    audioEngine.setPosition(`${newTime}:0:0`);
+    if (audioEngine.isInitialized) {
+      const bars = Math.floor(newTime);
+      const beats = Math.floor((newTime - bars) * 4);
+      const ticks = Math.floor(((newTime - bars) * 4 - beats) * 480);
+      audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+    }
   }
 
   handleZoomIn() {
@@ -226,6 +261,57 @@ class KeyboardHandler {
   handleDeselectAll() {
     this.store.setSelectedNotes([]);
     this.store.setSelectedTrack(null);
+  }
+
+  handleGoToStart() {
+    // Go to beginning of timeline
+    this.store.setCurrentTime(0);
+    if (audioEngine.isInitialized) {
+      audioEngine.setPosition('0:0:0');
+    }
+  }
+
+  handleGoToEnd() {
+    // Calculate end position based on latest note in all tracks
+    let latestTime = 0;
+    
+    this.store.tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        track.notes.forEach(note => {
+          const noteTime = note.measure || note.time || 0;
+          // Add note duration (convert to bars)
+          const noteDuration = this.getDurationInBars(note.duration || '4n');
+          const noteEnd = noteTime + noteDuration;
+          latestTime = Math.max(latestTime, noteEnd);
+        });
+      }
+    });
+    
+    // If no notes, go to bar 16 as default
+    const endTime = latestTime > 0 ? latestTime : 16;
+    
+    this.store.setCurrentTime(endTime);
+    if (audioEngine.isInitialized) {
+      const bars = Math.floor(endTime);
+      const beats = Math.floor((endTime - bars) * 4);
+      const ticks = Math.floor(((endTime - bars) * 4 - beats) * 480);
+      audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+    }
+  }
+
+  getDurationInBars(duration) {
+    // Convert note duration to bars
+    const durationMap = {
+      '1n': 4,     // Whole note = 4 beats = 1 bar
+      '2n': 2,     // Half note = 2 beats = 0.5 bars
+      '4n': 1,     // Quarter note = 1 beat = 0.25 bars
+      '8n': 0.5,   // Eighth note = 0.5 beats = 0.125 bars
+      '16n': 0.25, // Sixteenth note = 0.25 beats = 0.0625 bars
+      '32n': 0.125 // Thirty-second note = 0.125 beats = 0.03125 bars
+    };
+    
+    const beats = durationMap[duration] || 1;
+    return beats / 4; // Convert beats to bars (4 beats = 1 bar)
   }
 }
 

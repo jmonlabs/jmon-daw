@@ -55,13 +55,24 @@ export const demoComposition = {
         }
       },
       notes: [
-        { note: "C4", time: 0, duration: "4n", velocity: 0.8 },
-        { note: "E4", time: 1, duration: "4n", velocity: 0.7 },
-        { note: "G4", time: 2, duration: "4n", velocity: 0.9 },
-        { note: "C5", time: 3, duration: "4n", velocity: 0.8 },
-        { note: "G4", time: 4, duration: "2n", velocity: 0.6 },
-        { note: "E4", time: 6, duration: "4n", velocity: 0.7 },
-        { note: "C4", time: 7, duration: "4n", velocity: 0.8 }
+        // Mesure 1
+        { note: "C4", time: "0:0:0", duration: "4n", velocity: 0.8 },
+        { note: "E4", time: "0:1:0", duration: "4n", velocity: 0.7 },
+        { note: "G4", time: "0:2:0", duration: "4n", velocity: 0.9 },
+        { note: "C5", time: "0:3:0", duration: "4n", velocity: 0.8 },
+        // Mesure 2
+        { note: "G4", time: "1:0:0", duration: "2n", velocity: 0.6 },
+        { note: "E4", time: "1:2:0", duration: "4n", velocity: 0.7 },
+        { note: "C4", time: "1:3:0", duration: "4n", velocity: 0.8 },
+        // Mesure 3
+        { note: "F4", time: "2:0:0", duration: "4n", velocity: 0.8 },
+        { note: "A4", time: "2:1:0", duration: "4n", velocity: 0.7 },
+        { note: "C5", time: "2:2:0", duration: "4n", velocity: 0.9 },
+        { note: "F5", time: "2:3:0", duration: "4n", velocity: 0.8 },
+        // Mesure 4
+        { note: "E5", time: "3:0:0", duration: "2n", velocity: 0.6 },
+        { note: "C5", time: "3:2:0", duration: "4n", velocity: 0.7 },
+        { note: "A4", time: "3:3:0", duration: "4n", velocity: 0.8 }
       ]
     },
     {
@@ -83,10 +94,16 @@ export const demoComposition = {
         }
       },
       notes: [
-        { note: "C2", time: 0, duration: "2n", velocity: 0.9 },
-        { note: "F2", time: 2, duration: "2n", velocity: 0.9 },
-        { note: "G2", time: 4, duration: "2n", velocity: 0.9 },
-        { note: "C2", time: 6, duration: "2n", velocity: 0.9 }
+        // Mesures 1-2
+        { note: "C2", time: "0:0:0", duration: "2n", velocity: 0.9 },
+        { note: "F2", time: "0:2:0", duration: "2n", velocity: 0.9 },
+        { note: "G2", time: "1:0:0", duration: "2n", velocity: 0.9 },
+        { note: "C2", time: "1:2:0", duration: "2n", velocity: 0.9 },
+        // Mesures 3-4
+        { note: "F2", time: "2:0:0", duration: "2n", velocity: 0.9 },
+        { note: "A2", time: "2:2:0", duration: "2n", velocity: 0.9 },
+        { note: "G2", time: "3:0:0", duration: "2n", velocity: 0.9 },
+        { note: "F2", time: "3:2:0", duration: "2n", velocity: 0.9 }
       ]
     },
     {
@@ -104,26 +121,43 @@ export const demoComposition = {
         }
       },
       notes: [
-        { note: ["C3", "E3", "G3"], time: 0, duration: "1n", velocity: 0.4 },
-        { note: ["F3", "A3", "C4"], time: 4, duration: "1n", velocity: 0.4 }
+        { note: ["C3", "E3", "G3"], time: "0:0:0", duration: "1n", velocity: 0.4 },
+        { note: ["F3", "A3", "C4"], time: "1:0:0", duration: "1n", velocity: 0.4 },
+        { note: ["F3", "A3", "C4"], time: "2:0:0", duration: "1n", velocity: 0.4 },
+        { note: ["G3", "B3", "D4"], time: "3:0:0", duration: "1n", velocity: 0.4 }
       ]
     },
     {
       label: "Drums",
       synthRef: "drums_sampler",
       notes: [
-        { note: "C2", time: 0, duration: "4n", velocity: 0.9 },    // Kick
-        { note: "D2", time: 1, duration: "4n", velocity: 0.8 },    // Snare
-        { note: "C2", time: 2, duration: "4n", velocity: 0.9 },    // Kick
-        { note: "D2", time: 3, duration: "4n", velocity: 0.8 },    // Snare
-        { note: "F#2", time: 0.5, duration: "8n", velocity: 0.6 },  // Hi-hat
-        { note: "F#2", time: 1.5, duration: "8n", velocity: 0.6 },  // Hi-hat
-        { note: "F#2", time: 2.5, duration: "8n", velocity: 0.6 },  // Hi-hat
-        { note: "F#2", time: 3.5, duration: "8n", velocity: 0.6 },  // Hi-hat
-        { note: "C2", time: 4, duration: "4n", velocity: 0.9 },    // Kick
-        { note: "D2", time: 5, duration: "4n", velocity: 0.8 },    // Snare
-        { note: "C2", time: 6, duration: "4n", velocity: 0.9 },    // Kick
-        { note: "D2", time: 7, duration: "4n", velocity: 0.8 }     // Snare
+        // Mesure 1
+        { note: "C2", time: "0:0:0", duration: "4n", velocity: 0.9 },    // Kick
+        { note: "D2", time: "0:1:0", duration: "4n", velocity: 0.8 },    // Snare
+        { note: "C2", time: "0:2:0", duration: "4n", velocity: 0.9 },    // Kick
+        { note: "D2", time: "0:3:0", duration: "4n", velocity: 0.8 },    // Snare
+        { note: "F#2", time: "0:0.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "0:1.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "0:2.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "0:3.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        // Mesure 2
+        { note: "C2", time: "1:0:0", duration: "4n", velocity: 0.9 },    // Kick
+        { note: "D2", time: "1:1:0", duration: "4n", velocity: 0.8 },    // Snare
+        { note: "C2", time: "1:2:0", duration: "4n", velocity: 0.9 },    // Kick
+        { note: "D2", time: "1:3:0", duration: "4n", velocity: 0.8 },    // Snare
+        { note: "F#2", time: "1:0.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "1:1.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "1:2.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        { note: "F#2", time: "1:3.5:0", duration: "8n", velocity: 0.6 },  // Hi-hat
+        // Mesures 3-4
+        { note: "C2", time: "2:0:0", duration: "4n", velocity: 0.9 },
+        { note: "D2", time: "2:1:0", duration: "4n", velocity: 0.8 },
+        { note: "C2", time: "2:2:0", duration: "4n", velocity: 0.9 },
+        { note: "D2", time: "2:3:0", duration: "4n", velocity: 0.8 },
+        { note: "C2", time: "3:0:0", duration: "4n", velocity: 0.9 },
+        { note: "D2", time: "3:1:0", duration: "4n", velocity: 0.8 },
+        { note: "C2", time: "3:2:0", duration: "4n", velocity: 0.9 },
+        { note: "D2", time: "3:3:0", duration: "4n", velocity: 0.8 }
       ]
     }
   ]

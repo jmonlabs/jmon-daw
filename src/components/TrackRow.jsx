@@ -1,11 +1,21 @@
-import { Show, For } from 'solid-js';
+import { Show, For, createEffect } from 'solid-js';
 import { useDawStore } from '../stores/dawStore';
 import TrackLane from './TrackLane';
 
 export default function TrackRow(props) {
   const store = useDawStore();
   
-  const { track, index, beatWidth, barWidth, timelineScroll, verticalZoom, gridMarkers } = props;
+  const { track, index, beatWidth, barWidth, timelineScroll, gridMarkers } = props;
+  
+  let trackLaneSectionRef;
+
+  // Force synchronization of scroll when store.timelineScroll changes
+  createEffect(() => {
+    const currentScroll = store.timelineScroll;
+    if (trackLaneSectionRef && Math.abs(trackLaneSectionRef.scrollLeft - currentScroll) > 1) {
+      trackLaneSectionRef.scrollLeft = currentScroll;
+    }
+  });
 
   return (
     <div 
@@ -74,13 +84,89 @@ export default function TrackRow(props) {
           </div>
         </div>
         
+        {/* Vertical Zoom and Scroll Controls */}
+        <Show when={track.height > 120}>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.25rem; margin-bottom: 0.25rem;">
+            {/* Vertical Zoom */}
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="has-text-grey-light is-size-7 mb-1">V-Zoom</div>
+              <div class="buttons has-addons is-small">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newZoom = Math.max(0.5, (track.verticalZoom || 2.5) - 0.25);
+                    store.updateTrack(track.id, { verticalZoom: newZoom });
+                  }}
+                  class="button is-small is-dark"
+                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
+                >
+                  -
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log(`🎯 Manual auto-zoom triggered for track ${track.name}`);
+                    // Force auto-zoom by setting to default value (this triggers the createEffect)
+                    store.updateTrack(track.id, { verticalZoom: 2.5, verticalScroll: 0 });
+                  }}
+                  class="button is-small is-info"
+                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
+                  title="Auto-zoom to fit notes"
+                >
+                  A
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newZoom = Math.min(5, (track.verticalZoom || 2.5) + 0.25);
+                    store.updateTrack(track.id, { verticalZoom: newZoom });
+                  }}
+                  class="button is-small is-dark"
+                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            {/* Vertical Scroll */}
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="has-text-grey-light is-size-7 mb-1">V-Scroll</div>
+              <div class="buttons has-addons is-small">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newScroll = Math.max(-200, (track.verticalScroll || 0) - 20);
+                    store.updateTrack(track.id, { verticalScroll: newScroll });
+                  }}
+                  class="button is-small is-dark"
+                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newScroll = Math.min(200, (track.verticalScroll || 0) + 20);
+                    store.updateTrack(track.id, { verticalScroll: newScroll });
+                  }}
+                  class="button is-small is-dark"
+                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
+                >
+                  ↓
+                </button>
+              </div>
+            </div>
+          </div>
+        </Show>
+        
         {/* Note Count */}
         <div class="has-text-grey-light is-size-7">
           Notes: {track.notes?.length || 0}
         </div>
       </div>
 
-      {/* Track Lane Section - Flexible Width */}
+      {/* Track Lane Section - Individual scroll synchronized with global store */}
       <div 
         class="track-lane-section"
         style="
@@ -92,15 +178,14 @@ export default function TrackRow(props) {
           z-index: 1;
         "
         onScroll={(e) => {
-          // Sync horizontal scroll with store
+          // Sync horizontal scroll with store - but avoid infinite loops
           const scrollLeft = e.target.scrollLeft;
-          store.setTimelineScroll(scrollLeft);
+          if (Math.abs(scrollLeft - store.timelineScroll) > 1) {
+            store.setTimelineScroll(scrollLeft);
+          }
         }}
         ref={(ref) => {
-          // Sync scroll position from store
-          if (ref && ref.scrollLeft !== timelineScroll) {
-            ref.scrollLeft = timelineScroll;
-          }
+          trackLaneSectionRef = ref;
         }}
       >
         <TrackLane 
@@ -109,7 +194,6 @@ export default function TrackRow(props) {
           beatWidth={beatWidth} 
           barWidth={barWidth}
           timelineScroll={timelineScroll}
-          verticalZoom={verticalZoom}
           gridMarkers={gridMarkers}
           minHeight={80}
           trackHeight={track.height || 80}

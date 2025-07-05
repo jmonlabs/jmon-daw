@@ -70,7 +70,11 @@ class AudioEngine {
     else if (type === 'Sampler') {
       // Use basic sampler without external URLs to avoid 404s
       const { instrument, ...cleanOptions } = options; // Remove 'instrument' prop
-      node = new Tone.Sampler(cleanOptions);
+      // Create a basic oscillator-based sampler instead of file-based
+      node = new Tone.PolySynth({
+        oscillator: { type: 'square' },
+        envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 }
+      });
     }
     // Effect nodes
     else if (type === 'Reverb') {
@@ -209,22 +213,28 @@ class AudioEngine {
   // Enhanced sequence scheduling with better JMON support
   scheduleSequence(sequence, sequenceIndex) {
     const synth = this.getSequenceSynth(sequenceIndex);
-    if (!synth || !sequence.notes) return [];
+    if (!synth || !sequence.notes) {
+      return [];
+    }
 
     const scheduledEvents = [];
     
-    sequence.notes.forEach(note => {
-      const time = this.parseTime(note.time);
+    sequence.notes.forEach((note, noteIndex) => {
+      const originalTime = note.time || note.measure || 0;
+      const time = this.parseTime(originalTime);
       const duration = note.duration;
       
       const eventId = Tone.Transport.schedule((scheduledTime) => {
         try {
+          // Add small offset to prevent timing conflicts
+          const playTime = scheduledTime + (noteIndex * 0.001);
+          
           if (Array.isArray(note.note)) {
             // Chord
-            synth.triggerAttackRelease(note.note, duration, scheduledTime, note.velocity || 0.8);
+            synth.triggerAttackRelease(note.note, duration, playTime, note.velocity || 0.8);
           } else {
             // Single note
-            synth.triggerAttackRelease(note.note, duration, scheduledTime, note.velocity || 0.8);
+            synth.triggerAttackRelease(note.note, duration, playTime, note.velocity || 0.8);
           }
           
           // Handle note modulations (MIDI CC, pitch bend, aftertouch)
@@ -233,7 +243,7 @@ class AudioEngine {
               const modTime = this.parseTime(mod.time);
               Tone.Transport.schedule((modScheduledTime) => {
                 this.handleModulation(synth, mod);
-              }, scheduledTime + modTime);
+              }, playTime + modTime);
             });
           }
         } catch (error) {
@@ -313,13 +323,18 @@ class AudioEngine {
   }
 
   parseTime(time) {
-    if (typeof time === 'number') return time;
     if (typeof time === 'string') {
       // Handle Tone.js time notation like "0:0:0" or note values like "4n"
       if (time.includes(':')) return time;
       return time;
     }
-    return 0;
+    if (typeof time === 'number') {
+      // Legacy: Convert beats to bars:beats:ticks format for Tone.js
+      const bars = Math.floor(time / 4);
+      const beats = time % 4;
+      return `${bars}:${beats}:0`;
+    }
+    return "0:0:0";
   }
 
   parseDuration(duration) {
@@ -355,6 +370,11 @@ class AudioEngine {
     Tone.Transport.stop();
   }
 
+  clear() {
+    // Clear all scheduled events from Transport
+    Tone.Transport.cancel();
+  }
+
   setBpm(bpm) {
     Tone.Transport.bpm.value = bpm;
   }
@@ -380,6 +400,9 @@ class AudioEngine {
   buildAudioGraph(jmonData) {
     this.clearAudioGraph();
     
+    // Store JMON data for sequence management
+    this.currentJmonData = jmonData;
+    
     // Create all nodes
     if (jmonData.audioGraph) {
       jmonData.audioGraph.forEach(nodeConfig => {
@@ -402,7 +425,8 @@ class AudioEngine {
         // Use sequence synth config or synthRef
         if (sequence.synthRef) {
           // Reference to existing audio graph node
-          this.synths.set(synthId, this.audioGraph.get(sequence.synthRef));
+          const refNode = this.audioGraph.get(sequence.synthRef);
+          this.synths.set(synthId, refNode);
         } else if (sequence.synth) {
           // Create dedicated synth for this sequence
           const synthNode = this.createAudioNode({

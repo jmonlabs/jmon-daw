@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "JMON Composition (Multi-Track, Extended)",
-  "description": "A declarative music format supporting synthesis, MIDI, score notation, key changes, arbitrary metadata, annotations, and custom presets.",
+  "description": "A declarative music format supporting synthesis, MIDI, score notation, key changes, arbitrary metadata, annotations, and custom presets. Time values should use the bars:beats:ticks format (e.g., '2:1:240') for precise musical timing. This format is independent of BPM and follows professional DAW standards.",
   "type": "object",
   "required": [
     "format",
@@ -41,8 +41,15 @@
         "properties": {
           "time": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "number" }
+              { 
+                "type": "string", 
+                "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                "description": "Musical time in bars:beats:ticks format (e.g., '2:0:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Time in beats (deprecated)." 
+              }
             ],
             "description": "Time of the key signature change."
           },
@@ -69,8 +76,15 @@
         "properties": {
           "time": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "number" }
+              { 
+                "type": "string", 
+                "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                "description": "Musical time in bars:beats:ticks format (e.g., '4:0:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Time in beats (deprecated)." 
+              }
             ],
             "description": "The time point for the tempo change."
           },
@@ -90,8 +104,15 @@
       "properties": {
         "startOffset": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "number" }
+            { 
+              "type": "string", 
+              "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+              "description": "Musical time in bars:beats:ticks format (e.g., '0:2:0')."
+            },
+            { 
+              "type": "number", 
+              "description": "Legacy: Time in beats (deprecated)." 
+            }
           ],
           "description": "Offset for when playback should start."
         },
@@ -101,7 +122,8 @@
         },
         "globalLoopEnd": {
           "type": "string",
-          "description": "Where (in time) the global loop should end."
+          "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+          "description": "Musical time in bars:beats:ticks format where the global loop should end (e.g., '8:0:0')."
         },
         "swing": {
           "type": "number",
@@ -698,14 +720,33 @@
                 },
                 "time": {
                   "oneOf": [
-                    { "type": "string", "description": "Musical time (e.g., '0:2:0', '4n')." },
-                    { "type": "number", "description": "Absolute time in seconds." }
+                    { 
+                      "type": "string", 
+                      "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                      "description": "Musical time in bars:beats:ticks format (e.g., '0:2:0', '1:3.5:240'). Preferred format for precise musical timing."
+                    },
+                    { 
+                      "type": "string", 
+                      "pattern": "^(\\d+n|\\d+t)$",
+                      "description": "Tone.js note values (e.g., '4n', '8t') for relative timing."
+                    },
+                    { 
+                      "type": "number", 
+                      "description": "Legacy: Time in beats (deprecated, use bars:beats:ticks format instead)." 
+                    }
                   ]
                 },
                 "duration": {
                   "oneOf": [
-                    { "type": "string", "description": "Musical duration (e.g., '8n', '1:0:0')." },
-                    { "type": "number", "description": "Duration in seconds." }
+                    { 
+                      "type": "string", 
+                      "pattern": "^(\\d+n|\\d+t|\\d+:\\d+(\\.\\d+)?:\\d+)$",
+                      "description": "Musical duration using Tone.js note values (e.g., '4n', '8n', '2t') or bars:beats:ticks format (e.g., '1:0:0')."
+                    },
+                    { 
+                      "type": "number", 
+                      "description": "Legacy: Duration in seconds (deprecated, use note values instead)." 
+                    }
                   ]
                 },
                 "velocity": {
@@ -750,8 +791,15 @@
                       },
                       "time": {
                         "oneOf": [
-                          { "type": "string", "description": "Relative time (e.g., '8n')." },
-                          { "type": "number", "description": "Relative time in seconds." }
+                          { 
+                            "type": "string", 
+                            "pattern": "^(\\d+n|\\d+t|\\d+:\\d+(\\.\\d+)?:\\d+)$",
+                            "description": "Relative time using note values (e.g., '8n') or bars:beats:ticks (e.g., '0:0:240')."
+                          },
+                          { 
+                            "type": "number", 
+                            "description": "Legacy: Relative time in seconds (deprecated)." 
+                          }
                         ],
                         "description": "When this modulation event happens (relative to note start)."
                       }
@@ -772,7 +820,8 @@
           },
           "loopEnd": {
             "type": "string",
-            "description": "Time (musical or seconds) to end the loop."
+            "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+            "description": "Musical time in bars:beats:ticks format to end the loop (e.g., '4:0:0')."
           },
           "effects": {
             "type": "array",
@@ -814,8 +863,15 @@
           },
           "time": {
             "oneOf": [
-              { "type": "string", "description": "Musical time (e.g., '2:1:0')." },
-              { "type": "number", "description": "Absolute time in seconds." }
+              { 
+                "type": "string", 
+                "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                "description": "Musical time in bars:beats:ticks format (e.g., '2:1:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Time in beats (deprecated)." 
+              }
             ]
           },
           "value": {
@@ -839,8 +895,15 @@
           },
           "time": {
             "oneOf": [
-              { "type": "string", "description": "Musical time (e.g., '1:2:0')." },
-              { "type": "number", "description": "Absolute time in seconds." }
+              { 
+                "type": "string", 
+                "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                "description": "Musical time in bars:beats:ticks format (e.g., '1:2:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Time in beats (deprecated)." 
+              }
             ]
           },
           "type": {
@@ -849,8 +912,15 @@
           },
           "duration": {
             "oneOf": [
-              { "type": "string", "description": "Musical duration." },
-              { "type": "number", "description": "Duration in seconds." }
+              { 
+                "type": "string", 
+                "pattern": "^(\\d+n|\\d+t|\\d+:\\d+(\\.\\d+)?:\\d+)$",
+                "description": "Musical duration using note values (e.g., '4n') or bars:beats:ticks (e.g., '1:0:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Duration in seconds (deprecated)." 
+              }
             ],
             "description": "Optional duration for annotation (e.g., for lyrics or extended comments)."
           }
@@ -867,8 +937,15 @@
         "properties": {
           "time": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "number" }
+              { 
+                "type": "string", 
+                "pattern": "^\\d+:\\d+(\\.\\d+)?:\\d+$",
+                "description": "Musical time in bars:beats:ticks format (e.g., '8:0:0')."
+              },
+              { 
+                "type": "number", 
+                "description": "Legacy: Time in beats (deprecated)." 
+              }
             ],
             "description": "Time of the time signature change."
           },
@@ -1024,22 +1101,22 @@
           "notes": [
             {
               "note": "C4",
-              "time": 0,
-              "duration": 2,
+              "time": "0:0:0",
+              "duration": "2n",
               "velocity": 0.8,
               "modulations": [
-                { "type": "pitchBend", "value": -4096, "time": 0 },
-                { "type": "pitchBend", "value": 4096, "time": 1.5 }
+                { "type": "pitchBend", "value": -4096, "time": "0:0:0" },
+                { "type": "pitchBend", "value": 4096, "time": "0:1.5:0" }
               ]
             },
             {
               "note": "G4",
-              "time": 2,
-              "duration": 2,
+              "time": "0:2:0",
+              "duration": "2n",
               "velocity": 0.8,
               "modulations": [
-                { "type": "cc", "controller": 1, "value": 0, "time": 0 },
-                { "type": "cc", "controller": 1, "value": 127, "time": 1.5 }
+                { "type": "cc", "controller": 1, "value": 0, "time": "0:0:0" },
+                { "type": "cc", "controller": 1, "value": 127, "time": "0:1.5:0" }
               ]
             }
           ]
@@ -1064,12 +1141,12 @@
           },
           "notes": [{
             "note": "A4",
-            "time": 0,
-            "duration": 4,
+            "time": "0:0:0",
+            "duration": "1n",
             "velocity": 0.8,
             "modulations": [
-              { "type": "cc", "controller": 1, "value": 0, "time": 0 },
-              { "type": "cc", "controller": 1, "value": 127, "time": 3 }
+              { "type": "cc", "controller": 1, "value": 0, "time": "0:0:0" },
+              { "type": "cc", "controller": 1, "value": 127, "time": "0:3:0" }
             ]
           }]
         }]

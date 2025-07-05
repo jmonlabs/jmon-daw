@@ -1,27 +1,43 @@
 import { Show, createEffect, onCleanup } from 'solid-js';
 import { useDawStore } from '../stores/dawStore';
 import { audioEngine } from '../utils/audioEngine';
+import * as Tone from 'tone';
 import AppMenu from './AppMenu';
 
 export default function Transport() {
   const store = useDawStore();
 
-  // Update playhead position in real-time
+  // Update playhead position in real-time - simplified to avoid oscillation
   createEffect(() => {
     let animationFrame;
+    let lastUpdateTime = performance.now();
+    let basePosition = store.currentTime;
+    let baseTime = performance.now();
     
-    const updatePosition = () => {
-      if (store.isPlaying && audioEngine.isInitialized) {
-        const position = audioEngine.getPosition();
-        // Convert Tone.js position to bars (simplified)
-        const bars = parseFloat(position.split(':')[0]);
-        store.setCurrentTime(bars);
+    const updatePosition = (currentTime) => {
+      if (store.isPlaying) {
+        const deltaTime = (currentTime - baseTime) / 1000; // Convert to seconds
+        
+        // Calculate position based on BPM and elapsed time (smooth interpolation)
+        const beatsPerSecond = store.bpm / 60;
+        const beatsPerBar = 4;
+        const barsPerSecond = beatsPerSecond / beatsPerBar;
+        
+        // Simple time-based progression without audio engine sync to avoid oscillation
+        const newPosition = basePosition + (barsPerSecond * deltaTime);
+        store.setCurrentTime(newPosition);
       }
-      animationFrame = requestAnimationFrame(updatePosition);
+      
+      if (store.isPlaying) {
+        animationFrame = requestAnimationFrame(updatePosition);
+      }
     };
     
     if (store.isPlaying) {
-      updatePosition();
+      // Reset base when starting playback
+      basePosition = store.currentTime;
+      baseTime = performance.now();
+      animationFrame = requestAnimationFrame(updatePosition);
     }
     
     onCleanup(() => {
@@ -34,8 +50,26 @@ export default function Transport() {
   const handlePlay = async () => {
     if (!store.isPlaying) {
       try {
-        // Use the store's play method which handles audio graph setup
-        await store.play();
+        // Initialize audio engine if needed
+        if (!audioEngine.isInitialized) {
+          await audioEngine.init();
+          audioEngine.buildAudioGraph(store.jmonData);
+          audioEngine.setBpm(store.bpm);
+        }
+        
+        // Always clear and reschedule to ensure all notes play from current position
+        audioEngine.clear();
+        
+        // Set playback position
+        const bars = Math.floor(store.currentTime);
+        const beats = Math.floor((store.currentTime - bars) * 4);
+        const ticks = Math.floor(((store.currentTime - bars) * 4 - beats) * 480);
+        audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+        
+        // Re-schedule all sequences from current position
+        store.jmonData.sequences.forEach((sequence, index) => {
+          audioEngine.scheduleSequence(sequence, index);
+        });
         
         // Set up loop if enabled
         if (store.isLooping) {
@@ -43,18 +77,26 @@ export default function Transport() {
         } else {
           audioEngine.disableLoop();
         }
+        
+        // Start playback
+        audioEngine.play();
+        store.setPlaying(true);
       } catch (error) {
         console.error('Failed to start playback:', error);
         alert('Failed to start audio playback. Please check your audio settings and try again.');
       }
     } else {
-      store.pause();
+      // Pause but don't clear sequences - just stop the transport
+      audioEngine.pause();
+      store.setPlaying(false);
     }
   };
 
   const handleStop = () => {
-    store.stop();
-    audioEngine.clearAll(); // Clear scheduled events
+    audioEngine.stop();
+    audioEngine.clear(); // Clear scheduled events
+    store.setPlaying(false);
+    store.setCurrentTime(0);
   };
 
   const handleBpmChange = (e) => {
@@ -92,20 +134,22 @@ export default function Transport() {
           <div class="buttons has-addons">
             <button
               onClick={handlePlay}
-              class="button is-primary"
+              class="button is-small is-primary"
               title={store.isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+              style="border: none;"
             >
-              <span class="icon">
+              <span class="icon is-small">
                 <i class={store.isPlaying ? 'fas fa-pause' : 'fas fa-play'}></i>
               </span>
             </button>
             
             <button
               onClick={handleStop}
-              class="button is-dark"
+              class="button is-small is-dark"
               title="Stop (Shift+Enter)"
+              style="border: none;"
             >
-              <span class="icon">
+              <span class="icon is-small">
                 <i class="fas fa-stop"></i>
               </span>
             </button>
@@ -118,6 +162,7 @@ export default function Transport() {
             onClick={() => store.setLooping(!store.isLooping)}
             class={`button is-small ${store.isLooping ? 'is-warning' : 'is-dark'}`}
             title="Toggle Loop (Cmd+L)"
+            style="border: none;"
           >
             <span class="icon is-small">
               <i class="fas fa-redo"></i>
@@ -171,6 +216,7 @@ export default function Transport() {
                 onClick={() => store.setSnapEnabled(!store.snapEnabled)}
                 class={`button is-small ${store.snapEnabled ? 'is-info' : 'is-dark'}`}
                 title="Toggle Snap"
+                style="border: none;"
               >
                 <span class="icon is-small">
                   <i class="fas fa-magnet"></i>
@@ -178,23 +224,24 @@ export default function Transport() {
                 <span>Snap</span>
               </button>
             </div>
-            <Show when={store.snapEnabled}>
-              <div class="control">
-                <div class="select is-small">
-                  <select
-                    value={store.snapValue}
-                    onChange={(e) => store.setSnapValue(e.target.value)}
-                  >
-                    <option value="1">1</option>
-                    <option value="1/2">1/2</option>
-                    <option value="1/4">1/4</option>
-                    <option value="1/8">1/8</option>
-                    <option value="1/16">1/16</option>
-                    <option value="1/32">1/32</option>
-                  </select>
-                </div>
+            {/* Always show snap selector */}
+            <div class="control">
+              <div class="select is-small">
+                <select
+                  value={store.snapValue}
+                  onChange={(e) => store.setSnapValue(e.target.value)}
+                  style={store.snapEnabled ? "" : "opacity: 0.5;"}
+                  title="Snap Grid Value"
+                >
+                  <option value="1">1</option>
+                  <option value="1/2">1/2</option>
+                  <option value="1/4">1/4</option>
+                  <option value="1/8">1/8</option>
+                  <option value="1/16">1/16</option>
+                  <option value="1/32">1/32</option>
+                </select>
               </div>
-            </Show>
+            </div>
           </div>
         </div>
 
@@ -208,6 +255,7 @@ export default function Transport() {
               <button
                 onClick={() => store.setTimelineZoom(Math.max(0.25, store.timelineZoom - 0.25))}
                 class="button is-small is-dark"
+                style="border: none;"
               >
                 <span class="icon is-small">
                   <i class="fas fa-minus"></i>
@@ -218,6 +266,7 @@ export default function Transport() {
               <button
                 onClick={() => store.setTimelineZoom(Math.min(4, store.timelineZoom + 0.25))}
                 class="button is-small is-dark"
+                style="border: none;"
               >
                 <span class="icon is-small">
                   <i class="fas fa-plus"></i>
@@ -227,34 +276,6 @@ export default function Transport() {
           </div>
         </div>
 
-        {/* Vertical Zoom Controls */}
-        <div class="level-item">
-          <div class="field has-addons">
-            <div class="control">
-              <span class="button is-static is-small">V-Zoom</span>
-            </div>
-            <div class="control">
-              <button
-                onClick={() => store.setVerticalZoom(Math.max(0.5, store.verticalZoom - 0.25))}
-                class="button is-small is-dark"
-              >
-                <span class="icon is-small">
-                  <i class="fas fa-minus"></i>
-                </span>
-              </button>
-            </div>
-            <div class="control">
-              <button
-                onClick={() => store.setVerticalZoom(Math.min(3, store.verticalZoom + 0.25))}
-                class="button is-small is-dark"
-              >
-                <span class="icon is-small">
-                  <i class="fas fa-plus"></i>
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Menu Hamburger */}
         <div class="level-item">

@@ -1,6 +1,7 @@
-import { Show, onMount, onCleanup, For } from 'solid-js';
+import { Show, onMount, onCleanup, For, createEffect } from 'solid-js';
 import { useDawStore } from '../stores/dawStore';
 import { keyboardHandler } from '../utils/keyboardHandler';
+import { audioEngine } from '../utils/audioEngine';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-solid';
 import Transport from './Transport';
 import TrackRow from './TrackRow';
@@ -17,6 +18,24 @@ export default function Layout() {
 
   onCleanup(() => {
     keyboardHandler.destroy();
+  });
+
+  // Auto-scroll to follow playback and manual navigation
+  createEffect(() => {
+    const playheadX = store.currentTime * 80 * store.timelineZoom * 4;
+    const viewportWidth = window.innerWidth - 200 - (store.rightSidebarOpen ? 250 : 48);
+    const currentScroll = store.timelineScroll;
+    
+    // Auto-scroll during playback OR if playhead is completely off-screen
+    const isPlayheadOffScreen = playheadX < currentScroll || playheadX > currentScroll + viewportWidth;
+    
+    if (store.isPlaying || isPlayheadOffScreen) {
+      // Center the playhead in the viewport when scrolling
+      if (playheadX > currentScroll + viewportWidth - 100 || playheadX < currentScroll + 100) {
+        const newScroll = Math.max(0, playheadX - viewportWidth / 2);
+        store.setTimelineScroll(newScroll);
+      }
+    }
   });
 
   return (
@@ -42,17 +61,39 @@ export default function Layout() {
           {/* Header spacer for track info */}
           <div style="width: 200px; border-right: 1px solid #404040;"></div>
           
-          {/* Timeline ruler */}
-          <div style="flex: 1; background-color: #2b2b2b; position: relative; overflow: hidden;">
+          {/* Timeline ruler - fixed, with scroll compensation */}
+          <div 
+            style="flex: 1; background-color: #2b2b2b; position: relative; overflow: hidden; cursor: pointer;"
+            onClick={(e) => {
+              // Handle click on timeline ruler to set playback position
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left + store.timelineScroll;
+              const beatWidth = 80 * store.timelineZoom;
+              const barWidth = beatWidth * 4;
+              const clickedBars = x / barWidth;
+              
+              // Set new playback position
+              store.setCurrentTime(Math.max(0, clickedBars));
+              
+              // If audio engine is initialized, seek to new position
+              if (audioEngine.isInitialized) {
+                const bars = Math.floor(clickedBars);
+                const beats = Math.floor((clickedBars - bars) * 4);
+                const ticks = Math.floor(((clickedBars - bars) * 4 - beats) * 480);
+                audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+              }
+            }}
+          >
             {(() => {
               const beatWidth = 80 * store.timelineZoom;
               const barWidth = beatWidth * 4;
               const markers = [];
-              const rulerWidth = 5000; // Much wider to support longer compositions
+              const rulerWidth = 5000;
               const visibleBars = Math.ceil((rulerWidth + store.timelineScroll) / barWidth) + 10;
               const startBar = Math.floor(store.timelineScroll / barWidth);
               
               for (let bar = Math.max(0, startBar); bar < startBar + visibleBars; bar++) {
+                // Subtract scroll to keep ruler fixed while content scrolls
                 const barX = bar * barWidth - store.timelineScroll;
                 if (barX > -barWidth && barX < rulerWidth) {
                   markers.push({
@@ -146,7 +187,7 @@ export default function Layout() {
 
         {/* Tracks Area */}
         <div 
-          style="flex: 1; overflow-y: auto;"
+          style="flex: 1; overflow-y: auto; position: relative;"
           onWheel={(e) => {
             if (e.shiftKey) {
               // Horizontal scroll with Shift+wheel
@@ -163,12 +204,28 @@ export default function Layout() {
             }
           }}
         >
+          {/* Playback Progress Bar - Fixed position */}
+          <div
+            class="playback-progress-bar"
+            style={`
+              position: absolute;
+              top: 0;
+              left: ${200 + (store.currentTime * 80 * store.timelineZoom * 4) - store.timelineScroll}px;
+              width: 2px;
+              height: 100%;
+              background-color: #ff4444;
+              z-index: 100;
+              pointer-events: none;
+              opacity: ${store.isPlaying ? 1 : 0.7};
+              transition: opacity 0.2s ease;
+            `}
+          />
+
           <For each={store.tracks}>
             {(track, index) => {
               // Make zoom reactive
               const beatWidth = () => 80 * store.timelineZoom;
               const barWidth = () => 80 * store.timelineZoom * 4;
-              const verticalZoom = () => store.verticalZoom;
               
               // Generate grid markers for tracks
               const gridMarkers = () => {
@@ -204,7 +261,6 @@ export default function Layout() {
                   beatWidth={beatWidth}
                   barWidth={barWidth}
                   timelineScroll={store.timelineScroll}
-                  verticalZoom={verticalZoom}
                   gridMarkers={gridMarkers()}
                 />
               );
