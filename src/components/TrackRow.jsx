@@ -58,6 +58,7 @@ export default function TrackRow(props) {
               }}
               class={`button is-small ${track.muted ? 'is-danger' : 'is-dark'}`}
               style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              title={track.muted ? "Désactiver le mute" : "Activer le mute"}
             >
               M
             </button>
@@ -68,16 +69,20 @@ export default function TrackRow(props) {
               }}
               class={`button is-small ${track.solo ? 'is-warning' : 'is-dark'}`}
               style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              title={track.solo ? "Désactiver le solo" : "Activer le solo"}
             >
               S
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // TODO: Delete track
+                if (confirm(`Êtes-vous sûr de vouloir supprimer la track "${track.name || `Track ${index + 1}`}" ?`)) {
+                  store.removeTrack(track.id);
+                }
               }}
               class="button is-small is-dark"
               style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              title="Supprimer la track"
             >
               ×
             </button>
@@ -105,9 +110,42 @@ export default function TrackRow(props) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log(`🎯 Manual auto-zoom triggered for track ${track.name}`);
-                    // Force auto-zoom by setting to default value (this triggers the createEffect)
-                    store.updateTrack(track.id, { verticalZoom: 2.5, verticalScroll: 0 });
+                    console.log(`🎯 Auto-zoom triggered for track ${track.name}`);
+                    
+                    // Calculate optimal zoom to show all notes
+                    const notes = track.notes || [];
+                    if (notes.length === 0) {
+                      store.updateTrack(track.id, { verticalZoom: 1.0, verticalScroll: 0 });
+                      return;
+                    }
+                    
+                    // Get MIDI range of all notes
+                    const midiNotes = notes.map(note => 
+                      typeof note.note === 'string' ? 
+                        // Convert note name to MIDI (simple conversion)
+                        (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].indexOf(note.note.slice(0, -1)) + (parseInt(note.note.slice(-1)) + 1) * 12) :
+                        note.note
+                    ).filter(midi => !isNaN(midi));
+                    
+                    if (midiNotes.length === 0) {
+                      store.updateTrack(track.id, { verticalZoom: 1.0, verticalScroll: 0 });
+                      return;
+                    }
+                    
+                    const minMidi = Math.min(...midiNotes);
+                    const maxMidi = Math.max(...midiNotes);
+                    const noteRange = maxMidi - minMidi;
+                    
+                    // Calculate zoom level to fit all notes with some padding
+                    // Using our zoom formula: visibleSemitones = 12 / zoom
+                    // We want: visibleSemitones >= noteRange + padding
+                    const padding = Math.max(2, noteRange * 0.2); // 20% padding, min 2 semitones
+                    const requiredSemitones = noteRange + padding;
+                    const optimalZoom = Math.max(0.25, Math.min(4.0, 12 / requiredSemitones));
+                    
+                    console.log(`📊 Auto-zoom calculation: range=${minMidi}-${maxMidi} (${noteRange} semitones), requiredSemitones=${requiredSemitones.toFixed(1)}, optimalZoom=${optimalZoom.toFixed(2)}`);
+                    
+                    store.updateTrack(track.id, { verticalZoom: optimalZoom, verticalScroll: 0 });
                   }}
                   class="button is-small is-info"
                   style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"

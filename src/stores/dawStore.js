@@ -1,6 +1,6 @@
 import { createStore } from 'solid-js/store';
 import { createSignal } from 'solid-js';
-import { demoComposition } from '../data/demoComposition';
+import { demo01BasicSynth } from '../data/demo-01-basic-synth';
 import { audioEngine } from '../utils/audioEngine';
 
 // Create signals for reactive state
@@ -23,10 +23,12 @@ const [trackInfoOpen, setTrackInfoOpen] = createSignal(false);
 const [masterBusOpen, setMasterBusOpen] = createSignal(false);
 const [selectedEffect, setSelectedEffect] = createSignal(null);
 const [effectParams, setEffectParams] = createSignal({});
+const [contextMenu, setContextMenu] = createSignal(null);
+const [clipboard, setClipboard] = createSignal(null);
 
 // Create stores for complex objects
 const [tracks, setTracks] = createStore([]);
-const [jmonData, setJmonData] = createStore(JSON.parse(JSON.stringify(demoComposition)));
+const [jmonData, setJmonData] = createStore(JSON.parse(JSON.stringify(demo01BasicSynth)));
 
 // Default parameters for different effect types
 const getDefaultParams = (type, name) => {
@@ -84,6 +86,8 @@ export const dawStore = {
   get masterBusOpen() { return masterBusOpen(); },
   get selectedEffect() { return selectedEffect(); },
   get effectParams() { return effectParams(); },
+  get contextMenu() { return contextMenu(); },
+  get clipboard() { return clipboard(); },
   get jmonData() { return jmonData; },
 
   // Actions
@@ -101,6 +105,7 @@ export const dawStore = {
     if (audioEngine.isInitialized) {
       audioEngine.setBpm(newBpm);
     }
+    console.log(`🎵 BPM updated to ${newBpm} and synced to JMON`);
   },
   setCurrentTime: (time) => setCurrentTime(time),
   setLooping: (looping) => setIsLooping(looping),
@@ -124,7 +129,7 @@ export const dawStore = {
       synthType: 'Synth',
       synthOptions: {},
       effects: [],
-      verticalZoom: 2.5,
+      verticalZoom: 4.0,
       verticalScroll: 0
     };
     
@@ -151,26 +156,47 @@ export const dawStore = {
     const trackIndex = tracks.findIndex(t => t.id === trackId);
     if (trackIndex === -1) return;
     
+    // Log the updates for debugging
+    if (Object.keys(updates).some(key => ['muted', 'solo', 'volume', 'pan', 'name', 'synthType', 'effects'].includes(key))) {
+      console.log(`🔄 Track ${trackIndex} (${tracks[trackIndex].name}) updated:`, updates);
+    }
+    
     setTracks(trackIndex, updates);
     
-    // Update corresponding JMON sequence
-    setJmonData('sequences', trackIndex, sequence => ({
-      ...sequence,
-      label: updates.name || sequence.label,
-      notes: updates.notes || sequence.notes,
-      synth: updates.synthType ? {
-        type: updates.synthType,
-        options: updates.synthOptions || {}
-      } : sequence.synth
-    }));
+    // Update corresponding JMON sequence with ONLY musical properties (following JMON schema)
+    setJmonData('sequences', trackIndex, sequence => {
+      const updatedSequence = { ...sequence };
+      
+      // Only update JMON-valid properties
+      if (updates.name !== undefined) updatedSequence.label = updates.name;
+      if (updates.notes !== undefined) updatedSequence.notes = updates.notes;
+      if (updates.synthType) {
+        updatedSequence.synth = {
+          type: updates.synthType,
+          options: updates.synthOptions || {}
+        };
+      }
+      if (updates.effects !== undefined) updatedSequence.effects = updates.effects;
+      
+      // Do NOT save DAW UI state (muted, solo, volume, pan, verticalZoom, etc.) to JMON
+      // These will be managed separately in the DAW state
+      
+      return updatedSequence;
+    });
     
-    // Update audio engine if volume or pan changed
+    // Update audio engine if volume, pan, mute or solo changed
     if (audioEngine.isInitialized) {
       if (updates.volume !== undefined) {
         audioEngine.updateTrackVolume(trackIndex, updates.volume);
       }
       if (updates.pan !== undefined) {
         audioEngine.updateTrackPan(trackIndex, updates.pan);
+      }
+      if (updates.muted !== undefined) {
+        audioEngine.updateTrackMute(trackIndex, updates.muted);
+      }
+      if (updates.solo !== undefined) {
+        audioEngine.updateTrackSolo(trackIndex, updates.solo);
       }
     }
   },
@@ -195,6 +221,8 @@ export const dawStore = {
     setSelectedEffect(null);
     setEffectParams({});
   },
+  setContextMenu: (menu) => setContextMenu(menu),
+  setClipboard: (data) => setClipboard(data),
   updateEffectParam: (key, value) => {
     setEffectParams(prev => ({ ...prev, [key]: value }));
   },
@@ -208,6 +236,7 @@ export const dawStore = {
         synthType: effect.name,
         synthOptions: effectParams()
       });
+      console.log(`🎛️ Synth updated: ${effect.name} with options`, effectParams());
     } else if (effect.type === 'effect') {
       // Update effect parameters
       const trackIndex = tracks.findIndex(t => t.id === effect.trackId);
@@ -218,6 +247,7 @@ export const dawStore = {
           options: effectParams()
         };
         dawStore.updateTrack(effect.trackId, { effects: updatedEffects });
+        console.log(`🎛️ Effect updated: ${effect.name} with options`, effectParams());
       }
     }
     
@@ -231,58 +261,112 @@ export const dawStore = {
     }
   },
   
-  // Sync JMON data to DAW state
+  // Get clean JMON data for export/display (removes DAW-specific properties)
+  getCleanJmonData: () => {
+    const cleanData = { ...jmonData };
+    
+    // Clean sequences - remove DAW-only properties
+    if (cleanData.sequences) {
+      cleanData.sequences = cleanData.sequences.map(seq => {
+        const cleanSeq = { ...seq };
+        
+        // Remove DAW-specific properties that shouldn't be in JMON
+        delete cleanSeq.id;
+        delete cleanSeq.muted;
+        delete cleanSeq.solo;
+        delete cleanSeq.volume;
+        delete cleanSeq.pan;
+        delete cleanSeq.verticalZoom;
+        delete cleanSeq.verticalScroll;
+        delete cleanSeq.height;
+        
+        // Clean notes - remove DAW-specific properties
+        if (cleanSeq.notes) {
+          cleanSeq.notes = cleanSeq.notes.map(note => {
+            const cleanNote = { ...note };
+            delete cleanNote.id; // Remove note IDs - not part of JMON schema
+            return cleanNote;
+          });
+        }
+        
+        return cleanSeq;
+      });
+    }
+    
+    return cleanData;
+  },
+  
+  // Sync JMON data to DAW state - preserve existing DAW state for non-musical properties
   syncFromJmon: () => {
-    const syncedTracks = jmonData.sequences.map((seq, index) => ({
-      id: `track_${index}`,
-      name: seq.label,
-      muted: false,
-      solo: false,
-      volume: 0.8,
-      pan: 0,
-      notes: seq.notes || [],
-      synthType: seq.synth?.type || 'Synth',
-      synthOptions: seq.synth?.options || {},
-      effects: seq.effects || [],
-      verticalZoom: 2.5,
-      verticalScroll: 0
-    }));
+    const syncedTracks = jmonData.sequences.map((seq, index) => {
+      // Keep existing DAW state if track exists, otherwise use defaults
+      const existingTrack = tracks[index];
+      
+      return {
+        id: existingTrack?.id || `track_${index}`,
+        name: seq.label,
+        // Musical properties from JMON
+        notes: seq.notes || [],
+        synthType: seq.synth?.type || 'Synth',
+        synthOptions: seq.synth?.options || {},
+        effects: seq.effects || [],
+        // DAW properties - preserve existing state or use defaults
+        muted: existingTrack?.muted !== undefined ? existingTrack.muted : false,
+        solo: existingTrack?.solo !== undefined ? existingTrack.solo : false,
+        volume: existingTrack?.volume !== undefined ? existingTrack.volume : 0.8,
+        pan: existingTrack?.pan !== undefined ? existingTrack.pan : 0,
+        // UI state - preserve existing state or use defaults
+        verticalZoom: existingTrack?.verticalZoom !== undefined ? existingTrack.verticalZoom : 4.0,
+        verticalScroll: existingTrack?.verticalScroll !== undefined ? existingTrack.verticalScroll : 0,
+        height: existingTrack?.height !== undefined ? existingTrack.height : 150
+      };
+    });
     
     setTracks(syncedTracks);
     setBpm(jmonData.bpm);
+    
+    console.log('🔄 Synced tracks from JMON (preserved DAW state):', syncedTracks.map(t => ({
+      name: t.name,
+      notes: t.notes.length,
+      synthType: t.synthType
+    })));
   },
 
   // Initialize with demo data and audio graph
   loadDemo: async () => {
-    setJmonData(demoComposition);
+    setJmonData(demo01BasicSynth);
     
     // Initialize audio engine with JMON data
     try {
       await audioEngine.init();
-      audioEngine.buildAudioGraph(demoComposition);
-      audioEngine.setBpm(demoComposition.bpm);
+      audioEngine.buildAudioGraph(demo01BasicSynth);
+      audioEngine.setBpm(demo01BasicSynth.bpm);
     } catch (error) {
       console.error('Audio engine initialization failed:', error);
     }
     
-    const demoTracks = demoComposition.sequences.map((seq, index) => ({
+    // Create DAW tracks from JMON sequences with proper defaults for DAW-only properties
+    const demoTracks = demo01BasicSynth.sequences.map((seq, index) => ({
       id: `track_${index}`,
       name: seq.label,
-      muted: false,
-      solo: false,
-      volume: 0.8,
-      pan: 0,
+      // Musical properties from JMON
       notes: seq.notes || [],
       synthType: seq.synth?.type || 'Synth',
       synthOptions: seq.synth?.options || {},
       effects: seq.effects || [],
-      height: 150,
-      verticalZoom: 2.5,
-      verticalScroll: 0
+      // DAW-only properties (not stored in JMON)
+      muted: false,
+      solo: false, 
+      volume: 0.8,
+      pan: 0,
+      // UI state properties (not stored in JMON)
+      verticalZoom: 4.0,
+      verticalScroll: 0,
+      height: 150
     }));
     
     setTracks(demoTracks);
-    setBpm(demoComposition.bpm);
+    setBpm(demo01BasicSynth.bpm);
   },
   
   // Play/pause with audio engine integration
@@ -300,7 +384,8 @@ export const dawStore = {
     const currentTimeValue = currentTime();
     const bars = Math.floor(currentTimeValue);
     const beats = Math.floor((currentTimeValue - bars) * 4);
-    const ticks = Math.floor(((currentTimeValue - bars) * 4 - beats) * 480);
+    const ticksRaw = ((currentTimeValue - bars) * 4 - beats) * 480;
+    const ticks = Math.min(479, Math.max(0, Math.floor(ticksRaw)));
     audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
     
     console.log('🎵 Scheduling sequences for playback from position:', `${bars}:${beats}:${ticks}`);
@@ -321,6 +406,25 @@ export const dawStore = {
   
   pause: () => {
     audioEngine.pause();
+    
+    // Sync store.currentTime with actual transport position after pause
+    if (audioEngine.isInitialized) {
+      const transportPosition = audioEngine.getPosition();
+      console.log(`⏸️ Raw transport position: ${transportPosition}`);
+      if (transportPosition && typeof transportPosition === 'string') {
+        const parts = transportPosition.split(':');
+        if (parts.length === 3) {
+          const bars = parseInt(parts[0], 10);
+          const beats = parseInt(parts[1], 10);
+          const ticks = parseFloat(parts[2]); // Use parseFloat to handle decimals
+          // Convert to measures (store.currentTime format)
+          const measures = bars + (beats / 4) + (ticks / (4 * 480));
+          setCurrentTime(measures);
+          console.log(`⏸️ Synced currentTime to ${measures} from transport position ${transportPosition} (bars=${bars}, beats=${beats}, ticks=${ticks})`);
+        }
+      }
+    }
+    
     setIsPlaying(false);
   },
   

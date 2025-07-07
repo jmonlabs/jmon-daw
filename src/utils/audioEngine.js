@@ -229,6 +229,8 @@ class AudioEngine {
           // Add small offset to prevent timing conflicts
           const playTime = scheduledTime + (noteIndex * 0.001);
           
+          console.log(`🎼 Playing note: ${note.note} at time ${time} (scheduled: ${scheduledTime}, actual: ${playTime})`);
+          
           if (Array.isArray(note.note)) {
             // Chord
             synth.triggerAttackRelease(note.note, duration, playTime, note.velocity || 0.8);
@@ -359,11 +361,155 @@ class AudioEngine {
 
   play() {
     if (!this.isInitialized) return;
-    Tone.Transport.start();
+    
+    console.log(`🎵 Audio Engine Play - Transport state: ${Tone.Transport.state}, Position: ${Tone.Transport.position}, BPM: ${Tone.Transport.bpm.value}`);
+    
+    // Simply start or resume the transport - don't reschedule on every play
+    if (Tone.Transport.state === 'stopped') {
+      // Only reschedule if transport was completely stopped
+      this.rescheduleCurrentSequences();
+      Tone.Transport.start();
+      console.log(`🎵 Transport started from stopped state`);
+    } else if (Tone.Transport.state === 'paused') {
+      // Resume from pause: use current transport position directly
+      // No need to restore position - it should already be where we want it
+      console.log(`🔄 Resuming from current transport position: ${Tone.Transport.position}`);
+      
+      // Reschedule events that haven't played yet from this position
+      this.rescheduleFromCurrentPosition();
+      Tone.Transport.start();
+      console.log(`🎵 Transport resumed from pause`);
+    }
+    
+    // Log current transport state after operation
+    setTimeout(() => {
+      console.log(`🎵 Transport state after play: ${Tone.Transport.state}, Position: ${Tone.Transport.position}`);
+    }, 100);
+  }
+
+
+  // Reschedule current sequences (only when needed)
+  rescheduleCurrentSequences() {
+    if (this.currentJmonData && this.currentJmonData.sequences) {
+      // Clear existing scheduled events first
+      Tone.Transport.cancel();
+      
+      // Reschedule all sequences
+      this.currentJmonData.sequences.forEach((sequence, index) => {
+        if (sequence.notes && sequence.notes.length > 0) {
+          const synth = this.getSequenceSynth(index);
+          console.log(`🔄 Rescheduling sequence ${index} with ${sequence.notes.length} notes, synth:`, synth ? 'OK' : 'MISSING');
+          this.scheduleSequence(sequence, index);
+        }
+      });
+    }
+  }
+
+  // Reschedule only events that haven't played yet (for resume from pause)
+  rescheduleFromCurrentPosition() {
+    if (!this.currentJmonData || !this.currentJmonData.sequences) return 0;
+    
+    // Use current transport position directly
+    const currentPosition = Tone.Transport.position;
+    const currentTransportTime = this.parseTransportPositionToMeasures(currentPosition);
+    console.log(`🔄 Rescheduling from current position: ${currentPosition} (${currentTransportTime} measures)`);
+    
+    // Clear existing scheduled events
+    Tone.Transport.cancel();
+    
+    let totalScheduledCount = 0;
+    
+    // Reschedule only notes that haven't been played yet
+    this.currentJmonData.sequences.forEach((sequence, index) => {
+      if (sequence.notes && sequence.notes.length > 0) {
+        const synth = this.getSequenceSynth(index);
+        if (!synth) return;
+        
+        let scheduledCount = 0;
+        sequence.notes.forEach((note, noteIndex) => {
+          const originalTime = note.time || note.measure || 0;
+          const noteTime = this.parseTime(originalTime);
+          const noteTimeInMeasures = this.parseTimeToMeasures(noteTime);
+          
+          // Only schedule notes that haven't been played yet
+          if (noteTimeInMeasures >= currentTransportTime) {
+            const duration = note.duration;
+            
+            const eventId = Tone.Transport.schedule((scheduledTime) => {
+              try {
+                const playTime = scheduledTime + (noteIndex * 0.001);
+                console.log(`🎼 Playing note: ${note.note} at time ${noteTime} (scheduled: ${scheduledTime}, actual: ${playTime})`);
+                
+                if (Array.isArray(note.note)) {
+                  synth.triggerAttackRelease(note.note, duration, playTime, note.velocity || 0.8);
+                } else {
+                  synth.triggerAttackRelease(note.note, duration, playTime, note.velocity || 0.8);
+                }
+              } catch (error) {
+                console.error(`Failed to play note:`, error);
+              }
+            }, noteTime);
+            
+            scheduledCount++;
+          }
+        });
+        
+        totalScheduledCount += scheduledCount;
+        console.log(`🔄 Sequence ${index}: scheduled ${scheduledCount} future notes out of ${sequence.notes.length} total`);
+      }
+    });
+    
+    return totalScheduledCount;
+  }
+
+  // Convert transport position (bars:beats:ticks) to measures
+  parseTransportPositionToMeasures(position) {
+    if (typeof position !== 'string') return 0;
+    
+    const parts = position.split(':');
+    if (parts.length !== 3) return 0;
+    
+    const bars = parseInt(parts[0] || 0, 10);
+    const beats = parseInt(parts[1] || 0, 10);
+    const ticks = parseInt(parts[2] || 0, 10);
+    
+    // Validate the values are reasonable
+    if (bars < 0 || beats < 0 || beats >= 4 || ticks < 0 || ticks >= 480) {
+      console.warn(`Invalid transport position: ${position}, using 0`);
+      return 0;
+    }
+    
+    return bars + (beats / 4) + (ticks / (4 * 480));
+  }
+
+  // Convert time string to measures
+  parseTimeToMeasures(timeString) {
+    if (typeof timeString === 'number') return timeString;
+    if (typeof timeString !== 'string') return 0;
+    
+    const parts = timeString.split(':');
+    if (parts.length !== 3) return 0;
+    
+    const bars = parseInt(parts[0] || 0, 10);
+    const beats = parseInt(parts[1] || 0, 10);
+    const ticks = parseInt(parts[2] || 0, 10);
+    
+    // Validate the values are reasonable
+    if (bars < 0 || beats < 0 || beats >= 4 || ticks < 0 || ticks >= 480) {
+      console.warn(`Invalid time string: ${timeString}, using 0`);
+      return 0;
+    }
+    
+    return bars + (beats / 4) + (ticks / (4 * 480));
   }
 
   pause() {
-    Tone.Transport.pause();
+    console.log(`⏸️ Audio Engine Pause - Transport state: ${Tone.Transport.state}, Position: ${Tone.Transport.position}`);
+    
+    if (Tone.Transport.state === 'started') {
+      Tone.Transport.pause();
+      console.log(`⏸️ Transport paused at position: ${Tone.Transport.position}`);
+    }
   }
 
   stop() {
@@ -380,7 +526,43 @@ class AudioEngine {
   }
 
   setPosition(position) {
-    Tone.Transport.position = position;
+    // Validate and normalize position format
+    if (typeof position === 'string' && position.match(/^\d+:\d+:\d+$/)) {
+      const parts = position.split(':');
+      const bars = parseInt(parts[0], 10);
+      let beats = parseInt(parts[1], 10);
+      let ticks = parseInt(parts[2], 10);
+      
+      // Validate that values are within reasonable ranges
+      if (bars < 0 || beats < 0 || beats >= 4 || ticks < 0 || ticks >= 480) {
+        console.warn(`Invalid position values: ${position}, clamping to valid range`);
+        // Clamp values to valid ranges instead of ignoring
+        const clampedBars = Math.max(0, bars);
+        const clampedBeats = Math.max(0, Math.min(3, beats));
+        const clampedTicks = Math.max(0, Math.min(479, ticks));
+        position = `${clampedBars}:${clampedBeats}:${clampedTicks}`;
+      }
+      
+      console.log(`🔄 Setting transport position to: ${position}`);
+      
+      // Convert our position to total seconds and use Tone.js time format
+      // Tone.js time calculation: bars * 4 beats per bar + beats + ticks/480 (total beats)
+      // Then convert to seconds: total beats * (60 / BPM)
+      const totalBeats = bars * 4 + beats + (ticks / 480);
+      const totalSeconds = totalBeats * (60 / Tone.Transport.bpm.value);
+      
+      console.log(`🔄 Converting position ${position} to ${totalSeconds} seconds (totalBeats=${totalBeats})`);
+      
+      // Set position using seconds instead of BBT format
+      Tone.Transport.position = totalSeconds;
+      
+      // Log the actual position after setting to verify
+      const actualPosition = Tone.Transport.position;
+      console.log(`🔄 Transport position after setting: ${actualPosition}`);
+      
+    } else {
+      console.warn(`Invalid position format: ${position}, ignoring`);
+    }
   }
 
   getPosition() {

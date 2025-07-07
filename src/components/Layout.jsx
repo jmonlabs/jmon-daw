@@ -7,6 +7,7 @@ import Transport from './Transport';
 import TrackRow from './TrackRow';
 import JmonEditor from './JmonEditor';
 import StatusBar from './StatusBar';
+import { snapTimeToGrid } from '../utils/noteConversion';
 
 export default function Layout() {
   const store = useDawStore();
@@ -14,6 +15,18 @@ export default function Layout() {
   onMount(() => {
     keyboardHandler.init(store);
     store.loadDemo();
+    
+    // Close context menu on click outside
+    const handleClick = (e) => {
+      if (store.contextMenu && !e.target.closest('.context-menu')) {
+        store.setContextMenu(null);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    
+    onCleanup(() => {
+      document.removeEventListener('click', handleClick);
+    });
   });
 
   onCleanup(() => {
@@ -72,14 +85,23 @@ export default function Layout() {
               const barWidth = beatWidth * 4;
               const clickedBars = x / barWidth;
               
+              // Apply snap if enabled - convert to beats like in TrackLane
+              let finalTime = clickedBars;
+              if (store.snapEnabled) {
+                const beats = clickedBars * 4; // Convert bars to beats
+                const snappedBeats = snapTimeToGrid(beats, store.snapValue);
+                finalTime = snappedBeats / 4; // Convert back to bars
+              }
+              
               // Set new playback position
-              store.setCurrentTime(Math.max(0, clickedBars));
+              store.setCurrentTime(Math.max(0, finalTime));
               
               // If audio engine is initialized, seek to new position
               if (audioEngine.isInitialized) {
-                const bars = Math.floor(clickedBars);
-                const beats = Math.floor((clickedBars - bars) * 4);
-                const ticks = Math.floor(((clickedBars - bars) * 4 - beats) * 480);
+                const bars = Math.floor(finalTime);
+                const beats = Math.floor((finalTime - bars) * 4);
+                const ticksRaw = ((finalTime - bars) * 4 - beats) * 480;
+                const ticks = Math.min(479, Math.max(0, Math.floor(ticksRaw)));
                 audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
               }
             }}
@@ -672,6 +694,126 @@ export default function Layout() {
             <div style="flex: 1; overflow: hidden;">
               <JmonEditor />
             </div>
+          </div>
+        </Show>
+
+        {/* Global Context Menu */}
+        <Show when={store.contextMenu && store.contextMenu.type === 'note'}>
+          <div 
+            class="context-menu dropdown-content has-background-dark"
+            style={`
+              position: fixed;
+              left: ${store.contextMenu.x}px;
+              top: ${store.contextMenu.y}px;
+              z-index: 9999;
+              border: 1px solid #4b5563;
+              border-radius: 4px;
+              min-width: 8rem;
+            `}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <a 
+              class="dropdown-item has-text-light"
+              onClick={() => { 
+                // Copy note to clipboard
+                const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+                if (trackIndex !== -1) {
+                  const note = store.tracks[trackIndex].notes[store.contextMenu.noteIndex];
+                  store.setClipboard({ note, operation: 'copy' });
+                }
+                store.setContextMenu(null); 
+              }}
+              style="cursor: pointer;"
+            >
+              <span class="icon is-small mr-1">
+                <i class="fas fa-copy"></i>
+              </span>
+              Copier
+            </a>
+            <a 
+              class="dropdown-item has-text-light"
+              onClick={() => { 
+                // Cut note to clipboard
+                const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+                if (trackIndex !== -1) {
+                  const note = store.tracks[trackIndex].notes[store.contextMenu.noteIndex];
+                  store.setClipboard({ note, operation: 'cut' });
+                  const updatedNotes = store.tracks[trackIndex].notes.filter((_, i) => i !== store.contextMenu.noteIndex);
+                  store.updateTrack(store.contextMenu.trackId, { notes: updatedNotes });
+                }
+                store.setContextMenu(null); 
+              }}
+              style="cursor: pointer;"
+            >
+              <span class="icon is-small mr-1">
+                <i class="fas fa-cut"></i>
+              </span>
+              Couper
+            </a>
+            <a 
+              class="dropdown-item has-text-light"
+              onClick={() => { 
+                // Paste note from clipboard
+                if (store.clipboard && store.clipboard.note) {
+                  const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+                  if (trackIndex !== -1) {
+                    const pastedNote = { ...store.clipboard.note };
+                    const updatedNotes = [...store.tracks[trackIndex].notes, pastedNote];
+                    store.updateTrack(store.contextMenu.trackId, { notes: updatedNotes });
+                  }
+                }
+                store.setContextMenu(null); 
+              }}
+              style={`cursor: pointer; ${!store.clipboard ? 'opacity: 0.5;' : ''}`}
+              disabled={!store.clipboard}
+            >
+              <span class="icon is-small mr-1">
+                <i class="fas fa-paste"></i>
+              </span>
+              Coller
+            </a>
+            <a 
+              class="dropdown-item has-text-light"
+              onClick={() => { 
+                // Duplicate note directly to the right
+                const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+                if (trackIndex !== -1) {
+                  const originalNote = store.tracks[trackIndex].notes[store.contextMenu.noteIndex];
+                  const duplicatedNote = { 
+                    ...originalNote, 
+                    time: originalNote.time + originalNote.duration 
+                  };
+                  const updatedNotes = [...store.tracks[trackIndex].notes, duplicatedNote];
+                  store.updateTrack(store.contextMenu.trackId, { notes: updatedNotes });
+                }
+                store.setContextMenu(null); 
+              }}
+              style="cursor: pointer;"
+            >
+              <span class="icon is-small mr-1">
+                <i class="fas fa-clone"></i>
+              </span>
+              Dupliquer
+            </a>
+            <hr class="dropdown-divider" />
+            <a 
+              class="dropdown-item has-text-danger"
+              onClick={() => { 
+                // Delete note
+                const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+                if (trackIndex !== -1) {
+                  const updatedNotes = store.tracks[trackIndex].notes.filter((_, i) => i !== store.contextMenu.noteIndex);
+                  store.updateTrack(store.contextMenu.trackId, { notes: updatedNotes });
+                }
+                store.setContextMenu(null); 
+              }}
+              style="cursor: pointer;"
+            >
+              <span class="icon is-small mr-1">
+                <i class="fas fa-trash"></i>
+              </span>
+              Supprimer
+            </a>
           </div>
         </Show>
 

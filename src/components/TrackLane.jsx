@@ -3,6 +3,7 @@ import { useDawStore } from '../stores/dawStore';
 import { midiToNoteName, noteNameToMidi, snapTimeToGrid } from '../utils/noteConversion';
 import { audioEngine } from '../utils/audioEngine';
 
+
 // Piano keys for background - reduced density for better readability
 // Show only octaves and important notes to avoid grid overcrowding
 const PIANO_KEYS = [
@@ -16,113 +17,57 @@ export default function TrackLane(props) {
   const store = useDawStore();
   const [draggedNote, setDraggedNote] = createSignal(null);
   const [selectedNotes, setSelectedNotes] = createSignal(new Set());
-  const [contextMenu, setContextMenu] = createSignal(null);
   const [hoverNote, setHoverNote] = createSignal(null);
+  const [resizingNote, setResizingNote] = createSignal(null); // { noteIndex, edge: 'left'|'right' }
+
+  // FORCE CODE RELOAD CHECK - VERSION 2.0
+  console.log("🚀🚀🚀 TrackLane.jsx RELOADED - NO CLAMPING + NO AUTO-ZOOM VERSION 2.0 🚀🚀🚀");
+
+  // Debug log track properties on mount and change
+  createEffect(() => {
+    console.log(`🏷️ TRACK [${props.track.name}]: verticalZoom=${props.track.verticalZoom}, height=${props.track.height}, trackHeight=${props.trackHeight}`);
+  });
 
   let laneRef;
   let dragStartPos = { x: 0, y: 0 };
   let originalNoteData = null;
 
-  // Analyze note range for auto-zoom
-  const analyzeNoteRange = () => {
-    const notes = props.track.notes || [];
-    if (notes.length === 0) return { min: 60, max: 60, range: 0 };
-    
-    const midiNotes = notes.map(note => 
-      typeof note.note === 'string' ? noteNameToMidi(note.note) : note.note
-    );
-    
-    const min = Math.min(...midiNotes);
-    const max = Math.max(...midiNotes);
-    const range = max - min;
-    
-    return { min, max, range };
-  };
-
-  // Calculate optimal zoom for note range
-  const calculateOptimalZoom = () => {
-    const { min, max, range } = analyzeNoteRange();
-    const trackHeight = currentHeight();
-    
-    if (range === 0) return 1.0; // Conservative default for single note
-    
-    // Calculate what zoom would be needed to fit the actual note range in the track
-    const centerMidi = 60; // C4
-    const margin = 40;
-    const availableHeight = trackHeight - margin;
-    
-    // Find the note that would be positioned furthest from center
-    const maxDistanceFromCenter = Math.max(
-      Math.abs(min - centerMidi),
-      Math.abs(max - centerMidi)
-    );
-    
-    // Calculate base spacing (no zoom)
-    const minMidi = 24;
-    const maxMidi = 84;
-    const midiRange = maxMidi - minMidi;
-    const baseSpacing = availableHeight / midiRange;
-    
-    // Calculate maximum zoom that keeps all notes within bounds
-    // The furthest note should not exceed half the available height
-    const maxAllowedSpacing = (availableHeight / 2) / maxDistanceFromCenter;
-    const maxSafeZoom = maxAllowedSpacing / baseSpacing;
-    
-    // Use a conservative zoom that's 80% of the maximum safe zoom
-    const optimalZoom = Math.min(Math.max(maxSafeZoom * 0.8, 0.5), 2.0);
-    
-    console.log(`🔍 Safe zoom calculation:`, {
-      min, max, range,
-      maxDistanceFromCenter,
-      baseSpacing: baseSpacing.toFixed(3),
-      maxAllowedSpacing: maxAllowedSpacing.toFixed(3),
-      maxSafeZoom: maxSafeZoom.toFixed(3),
-      optimalZoom: optimalZoom.toFixed(3)
-    });
-    
-    return optimalZoom;
-  };
+  // REMOVED: Auto-zoom functions no longer needed
 
   // Track dimensions - use passed trackHeight or calculate from track data
   const minHeight = props.minHeight || 80;
   const currentHeight = () => props.trackHeight || Math.max(minHeight, props.track.height || minHeight);
 
-  // Grid spacing calculation - the space between each piano key/grid line
-  const getGridSpacing = () => {
+  // Grid spacing calculation - Simple approach based on track height and zoom
+  const getGridSpacing = createMemo(() => {
     const trackHeight = currentHeight();
-    const vZoom = props.track.verticalZoom || 2.5;
+    const zoom = props.track.verticalZoom || 1.0;
     
-    // Calculate spacing to fit our MIDI range within track height
-    // Use a wider range to accommodate bass notes: C1 to C6 = 60 semitones
-    const minMidi = 24; // C1  
-    const maxMidi = 84; // C6
-    const midiRange = maxMidi - minMidi; // 60 semitones
-    const margin = 20; // Smaller margins
-    const availableHeight = trackHeight - margin;
-    const baseSpacing = availableHeight / midiRange;
-    // Apply zoom directly - auto-zoom calculation ensures safe bounds
-    const finalSpacing = baseSpacing * vZoom;
+    // Simple calculation: divide track height by a reasonable number of visible semitones
+    // At zoom=1, show about 12-16 semitones (1-1.5 octaves)
+    const visibleSemitones = 12 / zoom; // More zoom = fewer visible semitones
+    const spacing = (trackHeight - 40) / visibleSemitones; // 20px margin top/bottom
     
-    // DEBUGGING: Log spacing calculation
-    console.log(`📏 Grid spacing for track ${props.track.name}:`, {
-      trackHeight,
-      vZoom,
-      baseSpacing: baseSpacing.toFixed(3),
-      finalSpacing: finalSpacing.toFixed(3)
-    });
+    console.log(`🔧 GRID SPACING: trackHeight=${trackHeight}, zoom=${zoom}, visibleSemitones=${visibleSemitones.toFixed(1)}, spacing=${spacing.toFixed(2)}`);
     
-    return finalSpacing;
-  };
+    return spacing;
+  });
   
-  // Note dimensions - reactive to vertical zoom - MATCHED to grid lines
-  const noteHeight = () => {
-    const gridSpacing = getGridSpacing();
-    return gridSpacing * 0.8; // 80% of grid spacing to leave some visual padding
-  };
-  const noteSpacing = () => {
+  // Note dimensions - Memoized to prevent excessive re-calculations
+  const noteHeight = createMemo(() => {
+    const spacing = getGridSpacing();
+    // Note height should be 80% of grid spacing, but at least 8px for visibility
+    const result = Math.max(8, spacing * 0.8);
+    
+    // Debug logging for note height
+    console.log(`📏 NOTE HEIGHT: spacing=${spacing.toFixed(2)}, result=${result.toFixed(2)}`);
+    
+    return result;
+  });
+  const noteSpacing = createMemo(() => {
     const gridSpacing = getGridSpacing();
     return gridSpacing * 0.1; // 10% of grid spacing for padding between notes
-  };
+  });
 
   // Convert bars:beats:ticks to measure position (number)
   const parseTimeToMeasures = (time) => {
@@ -152,6 +97,27 @@ export default function TrackLane(props) {
     return x / barWidth;
   };
 
+  // Convert duration string to measures
+  const parseDurationToMeasures = (duration) => {
+    if (typeof duration === 'number') return duration;
+    
+    const durationMap = {
+      '1n': 4, '2n': 2, '4n': 1, '8n': 0.5, '16n': 0.25, '32n': 0.125
+    };
+    
+    return durationMap[duration] || 1;
+  };
+
+  // Convert measures to duration string
+  const measuresToDuration = (measures) => {
+    if (measures >= 4) return '1n';
+    if (measures >= 2) return '2n';
+    if (measures >= 1) return '4n';
+    if (measures >= 0.5) return '8n';
+    if (measures >= 0.25) return '16n';
+    return '32n';
+  };
+
   // Convert duration to width
   const durationToWidth = (duration) => {
     const beatWidth = typeof props.beatWidth === 'function' ? props.beatWidth() : props.beatWidth;
@@ -164,36 +130,34 @@ export default function TrackLane(props) {
     return Math.max(20, (durationMap[duration] || 1) * beatWidth);
   };
 
-  // Calculate pitch-based Y position for any MIDI note
+
+  // Calculate pitch-based Y position for any MIDI note - NO CLAMPING
   const getPitchYPosition = (midiNote) => {
     const trackHeight = currentHeight();
-    const centerMidi = 60; // C4
-    const noteOffset = midiNote - centerMidi;
-    const centerY = trackHeight / 2;
     const spacing = getGridSpacing();
+    const currentNoteHeight = noteHeight();
     
-    // Calculate Y position: higher notes (positive offset) go up (smaller Y)
-    const yPosition = centerY - (noteOffset * spacing) - noteHeight() / 2;
+    // Simple approach: map MIDI notes directly to Y positions
+    // Use a reference point that makes sense for the visible range
+    const referenceMidi = 66; // F#4 - middle of the visible range
+    const referenceY = trackHeight / 2; // Center of track
     
-    // Clamp to track bounds
-    const minY = 5;
-    const maxY = trackHeight - noteHeight() - 5;
-    const finalY = Math.max(minY, Math.min(maxY, yPosition));
+    const noteOffset = midiNote - referenceMidi;
+    // Higher notes go up (smaller Y), lower notes go down (larger Y)
+    const noteCenterY = referenceY - (noteOffset * spacing);
+    const yPosition = noteCenterY - currentNoteHeight / 2;
     
-    // DEBUGGING: Log every note position calculation (disabled)
-    // console.log(`🎵 Note MIDI ${midiNote} (${midiToNoteName(midiNote)}):`, {
-    //   trackHeight,
-    //   centerMidi,
-    //   noteOffset,
-    //   centerY,
-    //   spacing,
-    //   noteHeight: noteHeight(),
-    //   yPosition,
-    //   finalY,
-    //   trackVerticalZoom: props.track.verticalZoom
-    // });
+    // NO CLAMPING - let notes go out of bounds naturally
+    // This way notes disappear when zoomed in, which is the expected behavior
     
-    return finalY;
+    // Debug logging for our demo notes
+    if ([60, 62, 64, 65, 67, 69, 71, 72].includes(midiNote)) {
+      const noteName = midiToNoteName(midiNote);
+      const visible = (yPosition >= -currentNoteHeight && yPosition <= trackHeight) ? '' : ' [OUT OF BOUNDS]';
+      console.log(`🎵 NOTE POSITION ${noteName}: midiNote=${midiNote}, offset=${noteOffset}, noteCenterY=${noteCenterY.toFixed(1)}, yPosition=${yPosition.toFixed(1)}${visible}`);
+    }
+    
+    return yPosition;
   };
 
   // Note positioning - adaptive based on track height
@@ -205,26 +169,7 @@ export default function TrackLane(props) {
       const note = props.track.notes[noteIndex];
       const midiNote = typeof note.note === 'string' ? noteNameToMidi(note.note) : note.note;
       
-      // DEBUGGING: Log note data before positioning (disabled)
-      // console.log(`🎼 Processing note ${noteIndex} in track ${props.track.name}:`, {
-      //   originalNote: note.note,
-      //   convertedMidi: midiNote,
-      //   time: note.time,
-      //   duration: note.duration
-      // });
-      
       const yPos = getPitchYPosition(midiNote);
-      
-      // Debug: Log note position for C4 - disabled
-      // if (midiNote === 60) {
-      //   console.log('C4 Note Render:', {
-      //     noteIndex,
-      //     midiNote,
-      //     noteName: note.note,
-      //     yPosition: yPos,
-      //     height: noteHeight()
-      //   });
-      // }
       
       return {
         y: yPos,
@@ -253,7 +198,7 @@ export default function TrackLane(props) {
 
   // Handle track lane click
   const handleLaneClick = (e) => {
-    if (draggedNote() || contextMenu()) return;
+    if (draggedNote() || store.contextMenu) return;
     
     const rect = laneRef.getBoundingClientRect();
     const x = e.clientX - rect.left + props.timelineScroll;
@@ -269,7 +214,8 @@ export default function TrackLane(props) {
     const bars = Math.floor(snappedMeasure);
     const remainingBeats = (snappedMeasure - bars) * 4;
     const beatsPart = Math.floor(remainingBeats);
-    const ticks = Math.round((remainingBeats - beatsPart) * 480);
+    const ticksRaw = (remainingBeats - beatsPart) * 480;
+    const ticks = Math.min(479, Math.max(0, Math.round(ticksRaw)));
     const timeString = `${bars}:${beatsPart}:${ticks}`;
     
     // Default note creation
@@ -303,8 +249,8 @@ export default function TrackLane(props) {
       note: midiToNoteName(midiNote),
       time: timeString,
       duration: '4n',
-      velocity: 0.8,
-      id: `note_${Date.now()}_${Math.random()}`
+      velocity: 0.8
+      // Removed 'id' - not part of JMON schema
     };
 
     // Preview note sound
@@ -327,6 +273,7 @@ export default function TrackLane(props) {
   // Note interaction handlers
   const handleNoteMouseDown = (note, noteIndex, e) => {
     e.stopPropagation();
+    e.preventDefault(); // Prevent any default behavior
     
     if (e.button === 2) {
       handleNoteContextMenu(note, noteIndex, e);
@@ -364,12 +311,13 @@ export default function TrackLane(props) {
 
   const handleNoteContextMenu = (note, noteIndex, e) => {
     e.preventDefault();
-    setContextMenu({
+    store.setContextMenu({
       x: e.clientX,
       y: e.clientY,
       note,
       noteIndex,
-      type: 'note'
+      type: 'note',
+      trackId: props.track.id
     });
   };
 
@@ -380,79 +328,148 @@ export default function TrackLane(props) {
     setSelectedNotes(new Set());
   };
 
-  // Handle mouse move for dragging
+  // Handle note resize start
+  const handleNoteResizeStart = (noteIndex, edge, e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const note = props.track.notes[noteIndex];
+    dragStartPos = { x: e.clientX, y: e.clientY };
+    originalNoteData = {
+      note: { ...note },
+      index: noteIndex,
+      measure: parseTimeToMeasures(note.time || 0),
+      duration: note.duration,
+      midiNote: typeof note.note === 'string' ? noteNameToMidi(note.note) : note.note
+    };
+    
+    setResizingNote({ noteIndex, edge });
+  };
+
+  // Handle mouse move for dragging and resizing
   const handleMouseMove = (e) => {
-    if (!draggedNote()) return;
+    if (!draggedNote() && !resizingNote()) return;
     
     const rect = laneRef.getBoundingClientRect();
     const currentX = e.clientX - rect.left + props.timelineScroll;
     const currentY = e.clientY - rect.top;
     
-    const deltaX = e.clientX - dragStartPos.x;
-    const deltaY = e.clientY - dragStartPos.y;
-    
-    // Calculate new position
-    const newMeasure = Math.max(0, xToMeasure(currentX));
-    // Convert measure to beats for snapping (1 measure = 4 beats)
-    const newBeats = newMeasure * 4;
-    const snappedBeats = store.snapEnabled ? snapTimeToGrid(newBeats, store.snapValue) : newBeats;
-    const snappedMeasure = snappedBeats / 4;
-    
-    // Convert to bars:beats:ticks format
-    const bars = Math.floor(snappedMeasure);
-    const remainingBeats = (snappedMeasure - bars) * 4;
-    const beatsPart = Math.floor(remainingBeats);
-    const ticks = Math.round((remainingBeats - beatsPart) * 480);
-    const newTimeString = `${bars}:${beatsPart}:${ticks}`;
-    
-    // Calculate new pitch if in expanded mode
-    let newMidiNote = originalNoteData.midiNote;
-    const trackHeight = currentHeight();
-    if (trackHeight > 120) {
-      // Find the closest MIDI note by checking which grid line the drag position is closest to
-      let closestMidi = originalNoteData.midiNote; // Default to original
-      let closestDistance = Infinity;
+    if (resizingNote()) {
+      // Handle note resizing
+      const resize = resizingNote();
+      const newMeasure = Math.max(0, xToMeasure(currentX));
+      const newBeats = newMeasure * 4;
+      const snappedBeats = store.snapEnabled ? snapTimeToGrid(newBeats, store.snapValue) : newBeats;
+      const snappedMeasure = snappedBeats / 4;
       
-      for (let testMidi = 48; testMidi <= 72; testMidi++) { // Test range C3 to C5
-        // Calculate the center Y position for this MIDI note
-        const centerMidi = 60;
-        const noteOffset = testMidi - centerMidi;
-        const centerY = trackHeight / 2;
-        const spacing = getGridSpacing();
-        const pitchCenterY = centerY - (noteOffset * spacing);
+      const updatedNotes = [...props.track.notes];
+      const originalNote = originalNoteData.note;
+      const originalMeasure = originalNoteData.measure;
+      
+      if (resize.edge === 'left') {
+        // Resize from left edge - change start time, adjust duration
+        const newStartMeasure = Math.min(snappedMeasure, originalMeasure + parseDurationToMeasures(originalNote.duration) - 0.25); // Minimum note length
+        const originalEndMeasure = originalMeasure + parseDurationToMeasures(originalNote.duration);
+        const newDuration = Math.max(0.25, originalEndMeasure - newStartMeasure); // Minimum duration
         
-        const distance = Math.abs(currentY - pitchCenterY);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestMidi = testMidi;
-        }
+        // Convert to bars:beats:ticks format
+        const bars = Math.floor(newStartMeasure);
+        const remainingBeats = (newStartMeasure - bars) * 4;
+        const beatsPart = Math.floor(remainingBeats);
+        const ticksRaw = (remainingBeats - beatsPart) * 480;
+        const ticks = Math.min(479, Math.max(0, Math.round(ticksRaw)));
+        const newTimeString = `${bars}:${beatsPart}:${ticks}`;
+        
+        updatedNotes[resize.noteIndex] = {
+          ...originalNote,
+          time: newTimeString,
+          duration: measuresToDuration(newDuration)
+        };
+      } else if (resize.edge === 'right') {
+        // Resize from right edge - change duration, keep start time
+        const newEndMeasure = Math.max(snappedMeasure, originalMeasure + 0.25); // Minimum note length
+        const newDuration = Math.max(0.25, newEndMeasure - originalMeasure);
+        
+        updatedNotes[resize.noteIndex] = {
+          ...originalNote,
+          duration: measuresToDuration(newDuration)
+        };
       }
       
-      newMidiNote = Math.max(0, Math.min(127, closestMidi));
+      store.updateTrack(props.track.id, { notes: updatedNotes });
+    } else if (draggedNote()) {
+      // Handle note dragging (existing code)
+      const deltaX = e.clientX - dragStartPos.x;
+      const deltaY = e.clientY - dragStartPos.y;
+      
+      // Calculate new position
+      const newMeasure = Math.max(0, xToMeasure(currentX));
+      // Convert measure to beats for snapping (1 measure = 4 beats)
+      const newBeats = newMeasure * 4;
+      const snappedBeats = store.snapEnabled ? snapTimeToGrid(newBeats, store.snapValue) : newBeats;
+      const snappedMeasure = snappedBeats / 4;
+      
+      // Convert to bars:beats:ticks format
+      const bars = Math.floor(snappedMeasure);
+      const remainingBeats = (snappedMeasure - bars) * 4;
+      const beatsPart = Math.floor(remainingBeats);
+      const ticksRaw = (remainingBeats - beatsPart) * 480;
+      const ticks = Math.min(479, Math.max(0, Math.round(ticksRaw)));
+      const newTimeString = `${bars}:${beatsPart}:${ticks}`;
+      
+      // Calculate new pitch if in expanded mode
+      let newMidiNote = originalNoteData.midiNote;
+      const trackHeight = currentHeight();
+      if (trackHeight > 120) {
+        // Find the closest MIDI note by checking which grid line the drag position is closest to
+        let closestMidi = originalNoteData.midiNote; // Default to original
+        let closestDistance = Infinity;
+        
+        for (let testMidi = 48; testMidi <= 72; testMidi++) { // Test range C3 to C5
+          // Calculate the center Y position for this MIDI note
+          const centerMidi = 60;
+          const noteOffset = testMidi - centerMidi;
+          const centerY = trackHeight / 2;
+          const spacing = getGridSpacing();
+          const pitchCenterY = centerY - (noteOffset * spacing);
+          
+          const distance = Math.abs(currentY - pitchCenterY);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestMidi = testMidi;
+          }
+        }
+        
+        newMidiNote = Math.max(0, Math.min(127, closestMidi));
+      }
+      
+      // Update note position
+      const updatedNotes = [...props.track.notes];
+      updatedNotes[draggedNote().index] = {
+        ...originalNoteData.note,
+        time: newTimeString,
+        note: midiToNoteName(newMidiNote)
+      };
+      
+      store.updateTrack(props.track.id, { notes: updatedNotes });
     }
-    
-    // Update note position
-    const updatedNotes = [...props.track.notes];
-    updatedNotes[draggedNote().index] = {
-      ...originalNoteData.note,
-      time: newTimeString,
-      note: midiToNoteName(newMidiNote)
-    };
-    
-    store.updateTrack(props.track.id, { notes: updatedNotes });
   };
 
-  // Handle mouse up to end dragging
+  // Handle mouse up to end dragging and resizing
   const handleMouseUp = (e) => {
     if (draggedNote()) {
       setDraggedNote(null);
+      originalNoteData = null;
+    }
+    if (resizingNote()) {
+      setResizingNote(null);
       originalNoteData = null;
     }
   };
 
   // Add global mouse event listeners
   createEffect(() => {
-    if (draggedNote()) {
+    if (draggedNote() || resizingNote()) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       
@@ -463,40 +480,10 @@ export default function TrackLane(props) {
     }
   });
 
-  // Auto-zoom effect: adjust zoom when notes change or track height changes
-  createEffect(() => {
-    const notes = props.track.notes || [];
-    const trackHeight = currentHeight();
-    
-    // Only auto-zoom if track is expanded and has notes
-    if (trackHeight > 120 && notes.length > 0) {
-      const optimalZoom = calculateOptimalZoom();
-      
-      // Always apply auto-zoom when track is first loaded or when explicitly requested
-      // Check if this is the initial load or if auto-zoom was explicitly requested
-      const currentZoom = props.track.verticalZoom;
-      const isInitialLoad = currentZoom === undefined;
-      const isAutoZoomRequested = currentZoom === 2.5; // Reset to default triggers auto-zoom
-      
-      if (isInitialLoad || isAutoZoomRequested) {
-        console.log(`🔍 Auto-zoom triggered for track ${props.track.name}:`, {
-          currentZoom,
-          optimalZoom,
-          noteCount: notes.length,
-          trackHeight,
-          noteRange: analyzeNoteRange()
-        });
-        
-        // Use setTimeout to ensure the update happens after the current render cycle
-        setTimeout(() => {
-          store.updateTrack(props.track.id, { 
-            verticalZoom: optimalZoom,
-            verticalScroll: 0 // Reset scroll when auto-zooming
-          });
-        }, 0);
-      }
-    }
-  });
+  // DISABLED: Auto-zoom effect was interfering with manual zoom controls
+  // createEffect(() => {
+  //   // Auto-zoom disabled to allow proper manual zoom control
+  // });
 
   // Select this track
   const selectTrack = () => {
@@ -530,57 +517,6 @@ export default function TrackLane(props) {
           transform: translateX(${-props.timelineScroll}px) translateY(${-(props.track.verticalScroll || 0)}px);
         `}
       >
-        {/* Grid Background - inside notes area */}
-        <div 
-          class="track-grid"
-          style="
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-          "
-        >
-          {/* Grid lines will be generated here */}
-          <For each={props.gridMarkers || []}>
-            {(marker) => {
-              const getGridOpacity = (type) => {
-                switch (type) {
-                  case 'bar': return '0.3';
-                  case 'beat': return '0.2';
-                  case '8th': return '0.1';
-                  case '16th': return '0.05';
-                  default: return '0.15';
-                }
-              };
-              
-              const getGridColor = (type) => {
-                switch (type) {
-                  case 'bar': return '#9ca3af';
-                  case 'beat': return '#6b7280';
-                  case '8th': return '#4b5563';
-                  case '16th': return '#374151';
-                  default: return '#6b7280';
-                }
-              };
-
-              return (
-                <div
-                  style={`
-                    position: absolute;
-                    left: ${marker.x}px;
-                    top: 0;
-                    bottom: 0;
-                    width: 1px;
-                    background-color: ${getGridColor(marker.type)};
-                    opacity: ${getGridOpacity(marker.type)};
-                  `}
-                />
-              );
-            }}
-          </For>
-        </div>
         {/* Piano Roll Background - Only in expanded mode */}
         <Show when={currentHeight() > 120}>
           {(() => {
@@ -589,13 +525,12 @@ export default function TrackLane(props) {
             const currentNoteHeight = noteHeight();
             const currentNoteSpacing = noteSpacing();
             const currentGridSpacing = getGridSpacing();
-            const vZoom = props.track.verticalZoom || 2.5;
+            const vZoom = props.track.verticalZoom || 4.0;
             const vScroll = props.track.verticalScroll || 0;
             
             // Ensure grid reacts to track zoom changes
             const spacing = currentGridSpacing;
             
-            // console.log('Piano roll render triggered:', { trackHeight, currentNoteHeight, currentNoteSpacing, currentGridSpacing, vZoom });
             
             // Filter visible keys for performance
             const visibleKeys = () => {
@@ -633,35 +568,10 @@ export default function TrackLane(props) {
                     // Grid line should be centered on this position
                     const y = gridCenterY;
                     
-                    // DEBUGGING: Log grid line positions for key notes (disabled)
-                    // if ([48, 60, 72].includes(midiNote)) {
-                    //   console.log(`🎹 Grid MIDI ${midiNote} (${midiToNoteName(midiNote)}):`, {
-                    //     trackHeight,
-                    //     centerY,
-                    //     noteOffset,
-                    //     spacing,
-                    //     gridCenterY: y,
-                    //     renderTop: y - currentNoteHeight/2
-                    //   });
-                    // }
 
 
-                    // Render grid line
-                    return (
-                      <div
-                        style={`
-                          position: absolute;
-                          top: ${y - currentNoteHeight/2}px;
-                          height: ${currentNoteHeight}px;
-                          left: 0;
-                          right: 0;
-                          background-color: ${isBlackKey ? '#333333' : '#404040'};
-                          opacity: 0.7;
-                          border-bottom: 1px solid #666666;
-                          z-index: 1;
-                        `}
-                      />
-                    );
+                    // Piano roll horizontal grid lines removed
+                    return null;
                   }}
                 </For>
               </div>
@@ -703,67 +613,73 @@ export default function TrackLane(props) {
                   transition: all 0.1s ease;
                 `}
                 onMouseDown={(e) => handleNoteMouseDown(note, index(), e)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
                 onMouseEnter={() => setHoverNote(index())}
                 onMouseLeave={() => setHoverNote(null)}
                 onContextMenu={(e) => e.preventDefault()}
                 title={`${note.note} - Vel: ${Math.round((note.velocity || 0.8) * 127)} - Dur: ${note.duration}`}
               >
-                <span style="color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {/* Left resize handle */}
+                <div
+                  style={`
+                    position: absolute;
+                    left: -4px;
+                    top: 0;
+                    width: ${Math.max(8, Math.min(16, position().height))}px;
+                    height: 100%;
+                    cursor: ew-resize;
+                    background: transparent;
+                    z-index: 25;
+                    opacity: ${isHovered || isSelected ? '1' : '0'};
+                    transition: opacity 0.1s ease;
+                  `}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleNoteResizeStart(index(), 'left', e);
+                  }}
+                  title="Resize start time"
+                >
+                  <div style="width: 3px; height: 100%; background: rgba(255,255,255,0.9); margin-left: 4px; border-radius: 1px;"></div>
+                </div>
+
+                {/* Note content */}
+                <span style="color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
                   {typeof note.note === 'string' ? note.note : midiToNoteName(note.note)}
                 </span>
+
+                {/* Right resize handle */}
+                <div
+                  style={`
+                    position: absolute;
+                    right: -4px;
+                    top: 0;
+                    width: ${Math.max(8, Math.min(16, position().height))}px;
+                    height: 100%;
+                    cursor: ew-resize;
+                    background: transparent;
+                    z-index: 25;
+                    opacity: ${isHovered || isSelected ? '1' : '0'};
+                    transition: opacity 0.1s ease;
+                  `}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleNoteResizeStart(index(), 'right', e);
+                  }}
+                  title="Resize duration"
+                >
+                  <div style="width: 3px; height: 100%; background: rgba(255,255,255,0.9); margin-left: 5px; border-radius: 1px;"></div>
+                </div>
               </div>
             );
           }}
         </For>
       </div>
 
-      {/* Context Menu */}
-      <Show when={contextMenu() && contextMenu().type === 'note'}>
-        <div 
-          class="context-menu dropdown-content has-background-dark"
-          style={`
-            position: fixed;
-            left: ${contextMenu().x}px;
-            top: ${contextMenu().y}px;
-            z-index: 50;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            min-width: 8rem;
-          `}
-        >
-          <a 
-            class="dropdown-item has-text-light"
-            onClick={() => { setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-copy"></i>
-            </span>
-            Copy
-          </a>
-          <a 
-            class="dropdown-item has-text-light"
-            onClick={() => { setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-clone"></i>
-            </span>
-            Duplicate
-          </a>
-          <hr class="dropdown-divider" />
-          <a 
-            class="dropdown-item has-text-danger"
-            onClick={() => { handleDeleteNote(contextMenu().noteIndex); setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-trash"></i>
-            </span>
-            Delete
-          </a>
-        </div>
-      </Show>
 
       {/* Selection Indicator */}
       <Show when={store.selectedTrack === props.track.id}>
@@ -785,3 +701,4 @@ export default function TrackLane(props) {
 }
 
 export { midiToNoteName, noteNameToMidi };
+

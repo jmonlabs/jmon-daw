@@ -6,10 +6,11 @@ export default function JmonEditor() {
   const [jsonText, setJsonText] = createSignal('');
   const [error, setError] = createSignal('');
 
-  // Initialize editor with current JMON data
+  // Initialize editor with clean JMON data (no DAW properties)
   createEffect(() => {
     if (store.jmonEditorOpen) {
-      setJsonText(JSON.stringify(store.jmonData, null, 2));
+      const cleanJmonData = store.getCleanJmonData();
+      setJsonText(JSON.stringify(cleanJmonData, null, 2));
       setError('');
     }
   });
@@ -55,13 +56,14 @@ export default function JmonEditor() {
 
   const handleExport = () => {
     try {
-      const dataStr = JSON.stringify(store.jmonData, null, 2);
+      const cleanJmonData = store.getCleanJmonData();
+      const dataStr = JSON.stringify(cleanJmonData, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${store.jmonData.metadata?.name || 'composition'}.jmon`;
+      link.download = `${cleanJmonData.metadata?.name || 'composition'}.jmon`;
       link.click();
       
       URL.revokeObjectURL(url);

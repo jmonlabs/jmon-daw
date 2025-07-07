@@ -63,8 +63,11 @@ export default function Transport() {
         // Set playback position
         const bars = Math.floor(store.currentTime);
         const beats = Math.floor((store.currentTime - bars) * 4);
-        const ticks = Math.floor(((store.currentTime - bars) * 4 - beats) * 480);
-        audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
+        const ticksRaw = ((store.currentTime - bars) * 4 - beats) * 480;
+        const ticks = Math.min(479, Math.max(0, Math.floor(ticksRaw)));
+        const positionString = `${bars}:${beats}:${ticks}`;
+        console.log(`🎵 Transport.jsx: currentTime=${store.currentTime}, calculated position=${positionString} (bars=${bars}, beats=${beats}, ticksRaw=${ticksRaw}, ticks=${ticks})`);
+        audioEngine.setPosition(positionString);
         
         // Re-schedule all sequences from current position
         store.jmonData.sequences.forEach((sequence, index) => {
