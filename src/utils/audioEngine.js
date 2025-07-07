@@ -579,11 +579,18 @@ class AudioEngine {
   }
 
   // Build audio graph from JMON configuration
-  buildAudioGraph(jmonData) {
+  buildAudioGraph(jmonData, dawTracks = null) {
     this.clearAudioGraph();
     
     // Store JMON data for sequence management
     this.currentJmonData = jmonData;
+    this.currentDawTracks = dawTracks;
+    
+    console.log('🎛️ EFFECTS DEBUG: Building audio graph with DAW tracks:', dawTracks?.map(t => ({
+      name: t.name,
+      effects: t.effects?.length || 0,
+      effectTypes: t.effects?.map(e => e.type) || []
+    })));
     
     // Create all nodes
     if (jmonData.audioGraph) {
@@ -619,9 +626,38 @@ class AudioEngine {
           
           this.synths.set(synthId, synthNode);
           
-          // Connect to destination or first available effect in graph
-          const destination = this.audioGraph.get('master') || Tone.Destination;
-          synthNode.connect(destination);
+          // Build effect chain for this track if DAW tracks are provided
+          let finalDestination = this.audioGraph.get('master') || Tone.Destination;
+          
+          if (dawTracks && dawTracks[index] && dawTracks[index].effects && dawTracks[index].effects.length > 0) {
+            console.log(`🎛️ EFFECTS DEBUG: Building effect chain for track ${index} (${dawTracks[index].name}):`, dawTracks[index].effects);
+            
+            // Create effect chain for this track
+            let currentNode = synthNode;
+            
+            dawTracks[index].effects.forEach((effectConfig, effectIndex) => {
+              const effectId = `track_${index}_effect_${effectIndex}`;
+              const effectNode = this.createAudioNode({
+                id: effectId,
+                type: effectConfig.type,
+                options: effectConfig.options || {}
+              });
+              
+              if (effectNode) {
+                console.log(`🎛️ EFFECTS DEBUG: Created effect ${effectConfig.type} for track ${index}, connecting...`);
+                currentNode.connect(effectNode);
+                currentNode = effectNode;
+              }
+            });
+            
+            // Connect final effect to master
+            currentNode.connect(finalDestination);
+            console.log(`🎛️ EFFECTS DEBUG: Connected effect chain to master for track ${index}`);
+          } else {
+            // No effects, connect directly to master
+            synthNode.connect(finalDestination);
+            console.log(`🎛️ EFFECTS DEBUG: No effects for track ${index}, connecting directly to master`);
+          }
         }
       });
     }

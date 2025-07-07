@@ -46,17 +46,17 @@ const getDefaultParams = (type, name) => {
   } else {
     switch (name) {
       case 'Reverb':
-        return { roomSize: 0.7, decay: 2.5, wet: 0.5 };
+        return { roomSize: 0.7, decay: 2.5, wet: 0.3 };
       case 'Delay':
-        return { delayTime: 0.25, feedback: 0.3, wet: 0.5 };
+        return { delayTime: 0.25, feedback: 0.3, wet: 0.4 };
       case 'Filter':
-        return { frequency: 1000, Q: 1, type: 'lowpass', wet: 0.5 };
+        return { frequency: 1000, Q: 1, type: 'lowpass', wet: 1.0 };
       case 'Chorus':
         return { frequency: 1.5, delayTime: 3.5, depth: 0.7, wet: 0.5 };
       case 'Distortion':
-        return { distortion: 0.4, oversample: '4x', wet: 0.5 };
+        return { distortion: 0.4, oversample: '4x', wet: 0.6 };
       case 'Compressor':
-        return { threshold: -24, ratio: 12, attack: 0.003, release: 0.25, wet: 0.5 };
+        return { threshold: -24, ratio: 12, attack: 0.003, release: 0.25, wet: 1.0 };
       default:
         return { wet: 0.5 };
     }
@@ -198,6 +198,12 @@ export const dawStore = {
       if (updates.solo !== undefined) {
         audioEngine.updateTrackSolo(trackIndex, updates.solo);
       }
+      
+      // Rebuild audio graph if effects changed
+      if (updates.effects !== undefined) {
+        console.log('🎛️ EFFECTS DEBUG: Effects changed, rebuilding audio graph');
+        audioEngine.buildAudioGraph(jmonData, tracks);
+      }
     }
   },
   
@@ -248,6 +254,11 @@ export const dawStore = {
         };
         dawStore.updateTrack(effect.trackId, { effects: updatedEffects });
         console.log(`🎛️ Effect updated: ${effect.name} with options`, effectParams());
+        
+        // Rebuild audio graph to apply effect changes
+        if (audioEngine.isInitialized) {
+          audioEngine.buildAudioGraph(jmonData, tracks);
+        }
       }
     }
     
@@ -257,7 +268,7 @@ export const dawStore = {
   updateJmonData: (data) => {
     setJmonData(data);
     if (audioEngine.isInitialized) {
-      audioEngine.buildAudioGraph(data);
+      audioEngine.buildAudioGraph(data, tracks);
     }
   },
   
@@ -339,7 +350,8 @@ export const dawStore = {
     // Initialize audio engine with JMON data
     try {
       await audioEngine.init();
-      audioEngine.buildAudioGraph(demo01BasicSynth);
+      // Pass empty tracks array initially since tracks will be created after this
+      audioEngine.buildAudioGraph(demo01BasicSynth, []);
       audioEngine.setBpm(demo01BasicSynth.bpm);
     } catch (error) {
       console.error('Audio engine initialization failed:', error);
@@ -367,13 +379,18 @@ export const dawStore = {
     
     setTracks(demoTracks);
     setBpm(demo01BasicSynth.bpm);
+    
+    // Rebuild audio graph now that tracks are created (for effect chains)
+    if (audioEngine.isInitialized) {
+      audioEngine.buildAudioGraph(demo01BasicSynth, demoTracks);
+    }
   },
   
   // Play/pause with audio engine integration
   play: async () => {
     if (!audioEngine.isInitialized) {
       await audioEngine.init();
-      audioEngine.buildAudioGraph(jmonData);
+      audioEngine.buildAudioGraph(jmonData, tracks);
       audioEngine.setBpm(bpm());
     }
     
@@ -432,7 +449,7 @@ export const dawStore = {
   updateJmonWithAudio: (data) => {
     setJmonData(data);
     if (audioEngine.isInitialized) {
-      audioEngine.buildAudioGraph(data);
+      audioEngine.buildAudioGraph(data, tracks);
     }
   },
   
