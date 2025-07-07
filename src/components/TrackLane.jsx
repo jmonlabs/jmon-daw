@@ -21,12 +21,9 @@ export default function TrackLane(props) {
   const [resizingNote, setResizingNote] = createSignal(null); // { noteIndex, edge: 'left'|'right' }
 
   // FORCE CODE RELOAD CHECK - VERSION 2.0
-  console.log("🚀🚀🚀 TrackLane.jsx RELOADED - NO CLAMPING + NO AUTO-ZOOM VERSION 2.0 🚀🚀🚀");
+  console.log("🚀🚀🚀 TrackLane.jsx RELOADED - EFFECTS DEBUG VERSION 🚀🚀🚀");
 
-  // Debug log track properties on mount and change
-  createEffect(() => {
-    console.log(`🏷️ TRACK [${props.track.name}]: verticalZoom=${props.track.verticalZoom}, height=${props.track.height}, trackHeight=${props.trackHeight}`);
-  });
+  // Removed track property debug logging
 
   let laneRef;
   let dragStartPos = { x: 0, y: 0 };
@@ -48,7 +45,6 @@ export default function TrackLane(props) {
     const visibleSemitones = 12 / zoom; // More zoom = fewer visible semitones
     const spacing = (trackHeight - 40) / visibleSemitones; // 20px margin top/bottom
     
-    console.log(`🔧 GRID SPACING: trackHeight=${trackHeight}, zoom=${zoom}, visibleSemitones=${visibleSemitones.toFixed(1)}, spacing=${spacing.toFixed(2)}`);
     
     return spacing;
   });
@@ -59,8 +55,6 @@ export default function TrackLane(props) {
     // Note height should be 80% of grid spacing, but at least 8px for visibility
     const result = Math.max(8, spacing * 0.8);
     
-    // Debug logging for note height
-    console.log(`📏 NOTE HEIGHT: spacing=${spacing.toFixed(2)}, result=${result.toFixed(2)}`);
     
     return result;
   });
@@ -101,33 +95,47 @@ export default function TrackLane(props) {
   const parseDurationToMeasures = (duration) => {
     if (typeof duration === 'number') return duration;
     
+    // Check if it's a precise decimal string (new format) - must be pure number string
+    if (typeof duration === 'string' && /^\d+\.?\d*$/.test(duration)) {
+      return parseFloat(duration);
+    }
+    
+    // Legacy note value mapping
     const durationMap = {
-      '1n': 4, '2n': 2, '4n': 1, '8n': 0.5, '16n': 0.25, '32n': 0.125
+      '1n': 1, '2n': 0.5, '4n': 0.25, '8n': 0.125, '16n': 0.0625, '32n': 0.03125
     };
     
     return durationMap[duration] || 1;
   };
 
-  // Convert measures to duration string
+  // Convert measures to duration string - Use precise decimal format for better resolution
   const measuresToDuration = (measures) => {
-    if (measures >= 4) return '1n';
-    if (measures >= 2) return '2n';
-    if (measures >= 1) return '4n';
-    if (measures >= 0.5) return '8n';
-    if (measures >= 0.25) return '16n';
-    return '32n';
+    // For precise control during resize, store the exact measure value as a number
+    // This bypasses the coarse note value quantization
+    return measures.toString();
   };
 
   // Convert duration to width
   const durationToWidth = (duration) => {
-    const beatWidth = typeof props.beatWidth === 'function' ? props.beatWidth() : props.beatWidth;
-    if (typeof duration === 'number') return duration * beatWidth * 4;
+    const barWidth = typeof props.barWidth === 'function' ? props.barWidth() : props.barWidth;
     
+    if (typeof duration === 'number') {
+      return Math.max(20, duration * barWidth);
+    }
+    
+    // Check if it's a precise decimal string (new format) - must be pure number string
+    if (typeof duration === 'string' && /^\d+\.?\d*$/.test(duration)) {
+      const measures = parseFloat(duration);
+      return Math.max(20, measures * barWidth);
+    }
+    
+    // Legacy note value mapping - convert to measures first
     const durationMap = {
-      '1n': 4, '2n': 2, '4n': 1, '8n': 0.5, '16n': 0.25, '32n': 0.125
+      '1n': 1, '2n': 0.5, '4n': 0.25, '8n': 0.125, '16n': 0.0625, '32n': 0.03125
     };
     
-    return Math.max(20, (durationMap[duration] || 1) * beatWidth);
+    const measures = durationMap[duration] || 1;
+    return Math.max(20, measures * barWidth);
   };
 
 
@@ -150,12 +158,7 @@ export default function TrackLane(props) {
     // NO CLAMPING - let notes go out of bounds naturally
     // This way notes disappear when zoomed in, which is the expected behavior
     
-    // Debug logging for our demo notes
-    if ([60, 62, 64, 65, 67, 69, 71, 72].includes(midiNote)) {
-      const noteName = midiToNoteName(midiNote);
-      const visible = (yPosition >= -currentNoteHeight && yPosition <= trackHeight) ? '' : ' [OUT OF BOUNDS]';
-      console.log(`🎵 NOTE POSITION ${noteName}: midiNote=${midiNote}, offset=${noteOffset}, noteCenterY=${noteCenterY.toFixed(1)}, yPosition=${yPosition.toFixed(1)}${visible}`);
-    }
+    // Removed debug logging - notes position as expected
     
     return yPosition;
   };
@@ -228,12 +231,12 @@ export default function TrackLane(props) {
       let closestDistance = Infinity;
       
       for (let testMidi = 48; testMidi <= 72; testMidi++) { // Test range C3 to C5
-        // Calculate the center Y position for this MIDI note
-        const centerMidi = 60;
-        const noteOffset = testMidi - centerMidi;
-        const centerY = trackHeight / 2;
+        // Use the SAME positioning logic as getPitchYPosition
         const spacing = getGridSpacing();
-        const pitchCenterY = centerY - (noteOffset * spacing);
+        const referenceMidi = 66; // F#4 - same as in getPitchYPosition
+        const referenceY = trackHeight / 2; // Center of track
+        const noteOffset = testMidi - referenceMidi;
+        const pitchCenterY = referenceY - (noteOffset * spacing);
         
         const distance = Math.abs(y - pitchCenterY);
         if (distance < closestDistance) {
@@ -335,13 +338,22 @@ export default function TrackLane(props) {
     
     const note = props.track.notes[noteIndex];
     dragStartPos = { x: e.clientX, y: e.clientY };
+    const measureTime = parseTimeToMeasures(note.time || 0);
+    const measureDuration = parseDurationToMeasures(note.duration);
+    
     originalNoteData = {
       note: { ...note },
       index: noteIndex,
-      measure: parseTimeToMeasures(note.time || 0),
+      measure: measureTime,
       duration: note.duration,
+      measureDuration: measureDuration,
       midiNote: typeof note.note === 'string' ? noteNameToMidi(note.note) : note.note
     };
+    
+    console.log(`🎯 RESIZE START [${edge}] ${note.note}:`);
+    console.log(`   📍 Original: time=${note.time}, duration=${note.duration}`);
+    console.log(`   📏 Measures: start=${measureTime.toFixed(3)}, duration=${measureDuration.toFixed(3)}, end=${(measureTime + measureDuration).toFixed(3)}`);
+    console.log(`   🖱️ Mouse start: x=${dragStartPos.x}, y=${dragStartPos.y}`);
     
     setResizingNote({ noteIndex, edge });
   };
@@ -355,44 +367,84 @@ export default function TrackLane(props) {
     const currentY = e.clientY - rect.top;
     
     if (resizingNote()) {
-      // Handle note resizing
+      // Handle note resizing - USE RELATIVE MOUSE MOVEMENT
       const resize = resizingNote();
-      const newMeasure = Math.max(0, xToMeasure(currentX));
-      const newBeats = newMeasure * 4;
-      const snappedBeats = store.snapEnabled ? snapTimeToGrid(newBeats, store.snapValue) : newBeats;
-      const snappedMeasure = snappedBeats / 4;
+      const deltaX = e.clientX - dragStartPos.x;
+      const deltaY = e.clientY - dragStartPos.y;
+      
+      // Convert mouse delta to measure delta
+      const barWidth = typeof props.barWidth === 'function' ? props.barWidth() : props.barWidth;
+      const deltaMeasures = deltaX / barWidth;
+      
+      console.log(`🔧 RESIZE MOVE [${resize.edge}]:`);
+      console.log(`   🖱️ Mouse: deltaX=${deltaX}px, deltaY=${deltaY}px`);
+      console.log(`   📏 Conversion: barWidth=${barWidth}, deltaMeasures=${deltaMeasures.toFixed(3)}`);
       
       const updatedNotes = [...props.track.notes];
       const originalNote = originalNoteData.note;
       const originalMeasure = originalNoteData.measure;
+      const originalDuration = originalNoteData.measureDuration; // Use pre-calculated value
       
       if (resize.edge === 'left') {
-        // Resize from left edge - change start time, adjust duration
-        const newStartMeasure = Math.min(snappedMeasure, originalMeasure + parseDurationToMeasures(originalNote.duration) - 0.25); // Minimum note length
-        const originalEndMeasure = originalMeasure + parseDurationToMeasures(originalNote.duration);
-        const newDuration = Math.max(0.25, originalEndMeasure - newStartMeasure); // Minimum duration
+        // Resize from left edge - move start time, keep end time fixed
+        const originalEndMeasure = originalMeasure + originalDuration;
+        const newStartMeasure = Math.max(0, originalMeasure + deltaMeasures);
+        let finalStartMeasure = newStartMeasure;
         
-        // Convert to bars:beats:ticks format
-        const bars = Math.floor(newStartMeasure);
-        const remainingBeats = (newStartMeasure - bars) * 4;
+        // Apply snapping to the new start time if enabled
+        // NOTE: Disabled during resize for fluid control
+        // if (store.snapEnabled) {
+        //   const newBeats = newStartMeasure * 4;
+        //   const snappedBeats = snapTimeToGrid(newBeats, store.snapValue);
+        //   finalStartMeasure = snappedBeats / 4;
+        // }
+        
+        // Calculate final duration - ensure minimum duration
+        const finalDuration = Math.max(0.125, originalEndMeasure - finalStartMeasure); // Minimum 32nd note
+        
+        // Convert final start to bars:beats:ticks format
+        const bars = Math.floor(finalStartMeasure);
+        const remainingBeats = (finalStartMeasure - bars) * 4;
         const beatsPart = Math.floor(remainingBeats);
         const ticksRaw = (remainingBeats - beatsPart) * 480;
         const ticks = Math.min(479, Math.max(0, Math.round(ticksRaw)));
         const newTimeString = `${bars}:${beatsPart}:${ticks}`;
         
-        updatedNotes[resize.noteIndex] = {
-          ...originalNote,
-          time: newTimeString,
-          duration: measuresToDuration(newDuration)
-        };
-      } else if (resize.edge === 'right') {
-        // Resize from right edge - change duration, keep start time
-        const newEndMeasure = Math.max(snappedMeasure, originalMeasure + 0.25); // Minimum note length
-        const newDuration = Math.max(0.25, newEndMeasure - originalMeasure);
+        console.log(`🔧 LEFT RESULT:`);
+        console.log(`   📏 Original: start=${originalMeasure.toFixed(3)}, duration=${originalDuration.toFixed(3)}, end=${originalEndMeasure.toFixed(3)}`);
+        console.log(`   📏 Raw calculation: newStart=${newStartMeasure.toFixed(3)}, snappedStart=${finalStartMeasure.toFixed(3)}`);
+        console.log(`   📏 Final: start=${finalStartMeasure.toFixed(3)}, duration=${finalDuration.toFixed(3)}, end=${originalEndMeasure.toFixed(3)}`);
+        console.log(`   📄 Time string: ${newTimeString}, duration: ${measuresToDuration(finalDuration)}`);
         
         updatedNotes[resize.noteIndex] = {
           ...originalNote,
-          duration: measuresToDuration(newDuration)
+          time: newTimeString,
+          duration: measuresToDuration(finalDuration)
+        };
+      } else if (resize.edge === 'right') {
+        // Resize from right edge - keep start time, change end time
+        const newDuration = Math.max(0.125, originalDuration + deltaMeasures); // Minimum 32nd note
+        let finalDuration = newDuration;
+        
+        // Apply snapping to the end time if enabled
+        // NOTE: Disabled during resize for fluid control
+        // if (store.snapEnabled) {
+        //   const newEndMeasure = originalMeasure + newDuration;
+        //   const newBeats = newEndMeasure * 4;
+        //   const snappedBeats = snapTimeToGrid(newBeats, store.snapValue);
+        //   const snappedEndMeasure = snappedBeats / 4;
+        //   finalDuration = Math.max(0.125, snappedEndMeasure - originalMeasure);
+        // }
+        
+        console.log(`🔧 RIGHT RESULT:`);
+        console.log(`   📏 Original: start=${originalMeasure.toFixed(3)}, duration=${originalDuration.toFixed(3)}, end=${(originalMeasure + originalDuration).toFixed(3)}`);
+        console.log(`   📏 Raw calculation: newDuration=${newDuration.toFixed(3)}, newEnd=${(originalMeasure + newDuration).toFixed(3)}`);
+        console.log(`   📏 Final: start=${originalMeasure.toFixed(3)}, duration=${finalDuration.toFixed(3)}, end=${(originalMeasure + finalDuration).toFixed(3)}`);
+        console.log(`   📄 Duration string: ${measuresToDuration(finalDuration)}`);
+        
+        updatedNotes[resize.noteIndex] = {
+          ...originalNote,
+          duration: measuresToDuration(finalDuration)
         };
       }
       
@@ -426,12 +478,12 @@ export default function TrackLane(props) {
         let closestDistance = Infinity;
         
         for (let testMidi = 48; testMidi <= 72; testMidi++) { // Test range C3 to C5
-          // Calculate the center Y position for this MIDI note
-          const centerMidi = 60;
-          const noteOffset = testMidi - centerMidi;
-          const centerY = trackHeight / 2;
+          // Use the SAME positioning logic as getPitchYPosition
           const spacing = getGridSpacing();
-          const pitchCenterY = centerY - (noteOffset * spacing);
+          const referenceMidi = 66; // F#4 - same as in getPitchYPosition
+          const referenceY = trackHeight / 2; // Center of track
+          const noteOffset = testMidi - referenceMidi;
+          const pitchCenterY = referenceY - (noteOffset * spacing);
           
           const distance = Math.abs(currentY - pitchCenterY);
           if (distance < closestDistance) {
@@ -626,15 +678,16 @@ export default function TrackLane(props) {
                 <div
                   style={`
                     position: absolute;
-                    left: -4px;
+                    left: 0px;
                     top: 0;
-                    width: ${Math.max(8, Math.min(16, position().height))}px;
+                    width: 12px;
                     height: 100%;
                     cursor: ew-resize;
-                    background: transparent;
+                    background: ${isHovered || isSelected ? 'rgba(255,255,255,0.1)' : 'transparent'};
                     z-index: 25;
-                    opacity: ${isHovered || isSelected ? '1' : '0'};
+                    opacity: 1;
                     transition: opacity 0.1s ease;
+                    border-left: 2px solid ${isHovered || isSelected ? 'rgba(255,255,255,0.8)' : 'transparent'};
                   `}
                   onMouseDown={(e) => {
                     e.stopPropagation();
@@ -643,7 +696,6 @@ export default function TrackLane(props) {
                   }}
                   title="Resize start time"
                 >
-                  <div style="width: 3px; height: 100%; background: rgba(255,255,255,0.9); margin-left: 4px; border-radius: 1px;"></div>
                 </div>
 
                 {/* Note content */}
@@ -655,15 +707,16 @@ export default function TrackLane(props) {
                 <div
                   style={`
                     position: absolute;
-                    right: -4px;
+                    right: 0px;
                     top: 0;
-                    width: ${Math.max(8, Math.min(16, position().height))}px;
+                    width: 12px;
                     height: 100%;
                     cursor: ew-resize;
-                    background: transparent;
+                    background: ${isHovered || isSelected ? 'rgba(255,255,255,0.1)' : 'transparent'};
                     z-index: 25;
-                    opacity: ${isHovered || isSelected ? '1' : '0'};
+                    opacity: 1;
                     transition: opacity 0.1s ease;
+                    border-right: 2px solid ${isHovered || isSelected ? 'rgba(255,255,255,0.8)' : 'transparent'};
                   `}
                   onMouseDown={(e) => {
                     e.stopPropagation();
@@ -672,7 +725,6 @@ export default function TrackLane(props) {
                   }}
                   title="Resize duration"
                 >
-                  <div style="width: 3px; height: 100%; background: rgba(255,255,255,0.9); margin-left: 5px; border-radius: 1px;"></div>
                 </div>
               </div>
             );
