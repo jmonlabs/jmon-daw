@@ -1,19 +1,31 @@
-import { Show, createSignal } from 'solid-js';
-import { useDawStore } from '../stores/dawStore';
+import { Show, createSignal } from "solid-js";
+import { useDawStore } from "../stores/dawStore";
 
 export default function AppMenu() {
   const store = useDawStore();
   const [isOpen, setIsOpen] = createSignal(false);
+  const [isCollapsed, setIsCollapsed] = createSignal(false);
+
+  // Check if menu should show collapsed items
+  const checkCollapse = () => {
+    const width = window.innerWidth;
+    setIsCollapsed(width < 1024);
+  };
+
+  window.addEventListener('resize', checkCollapse);
+  checkCollapse();
 
   const handleNewProject = () => {
-    if (confirm('Create a new project? This will clear the current composition.')) {
+    if (
+      confirm("Create a new project? This will clear the current composition.")
+    ) {
       store.updateJmonData({
-        format: 'jmonTone',
-        version: '1.0',
+        format: "jmonTone",
+        version: "1.0",
         bpm: 120,
-        audioGraph: [{ id: 'master', type: 'Destination', options: {} }],
+        audioGraph: [{ id: "master", type: "Destination", options: {} }],
         connections: [],
-        sequences: []
+        sequences: [],
       });
       store.syncFromJmon();
     }
@@ -28,14 +40,14 @@ export default function AppMenu() {
   const handleExportJMON = () => {
     try {
       const dataStr = JSON.stringify(store.jmonData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
+
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `${store.jmonData.metadata?.name || 'composition'}.jmon`;
+      link.download = `${store.jmonData.metadata?.name || "composition"}.jmon`;
       link.click();
-      
+
       URL.revokeObjectURL(url);
     } catch (err) {
       alert(`Export Error: ${err.message}`);
@@ -44,9 +56,9 @@ export default function AppMenu() {
   };
 
   const handleImportJMON = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.jmon,.json';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jmon,.json";
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -71,137 +83,230 @@ export default function AppMenu() {
     <div style="position: relative; z-index: 1000;">
       <button
         onClick={() => setIsOpen(!isOpen())}
-        class="button is-dark is-small"
+        class="button is-small app-menu-button"
         title="Menu"
       >
         <span class="icon is-small">
-          <i class="fas fa-bars"></i>
+          <i class="fa-solid fa-bars"></i>
         </span>
       </button>
 
       {isOpen() && (
-        <div 
+        <div
           style="
-            position: absolute; 
-            top: 100%; 
-            right: 0; 
-            background: #2b2b2b; 
-            border: 1px solid #404040; 
-            border-radius: 4px; 
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--elevated-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
             min-width: 150px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: var(--shadow-lg);
             z-index: 1001;
           "
         >
-          <button 
+          <button
             style="
-              display: flex; 
-              align-items: center; 
-              gap: 8px; 
-              width: 100%; 
-              padding: 8px 12px; 
-              border: none; 
-              background: transparent; 
-              color: #f5f5f5; 
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              width: 100%;
+              padding: 8px 12px;
+              border: none;
+              background: transparent;
+              color: var(--text-primary);
               cursor: pointer;
               font-size: 14px;
             "
-            onMouseEnter={(e) => e.target.style.background = '#404040'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = "var(--hover-overlay)")
+            }
+            onMouseLeave={(e) => (e.target.style.background = "transparent")}
             onClick={handleNewProject}
           >
-            <i class="fas fa-file"></i>
+            <i class="fa-solid fa-file"></i>
             <span>New Project</span>
           </button>
-          
-          <button 
+
+          <button
             style="
-              display: flex; 
-              align-items: center; 
-              gap: 8px; 
-              width: 100%; 
-              padding: 8px 12px; 
-              border: none; 
-              background: transparent; 
-              color: #f5f5f5; 
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              width: 100%;
+              padding: 8px 12px;
+              border: none;
+              background: transparent;
+              color: var(--text-primary);
               cursor: pointer;
               font-size: 14px;
             "
-            onMouseEnter={(e) => e.target.style.background = '#404040'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = "var(--hover-overlay)")
+            }
+            onMouseLeave={(e) => (e.target.style.background = "transparent")}
             onClick={handleLoadDemo}
           >
-            <i class="fas fa-play"></i>
+            <i class="fa-solid fa-play"></i>
             <span>Load Demo</span>
           </button>
-          
-          <div style="height: 1px; background: #404040; margin: 4px 0;"></div>
-          
-          <button 
+
+          <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
+
+          <button
             style="
-              display: flex; 
-              align-items: center; 
-              gap: 8px; 
-              width: 100%; 
-              padding: 8px 12px; 
-              border: none; 
-              background: transparent; 
-              color: #f5f5f5; 
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              width: 100%;
+              padding: 8px 12px;
+              border: none;
+              background: transparent;
+              color: var(--text-primary);
               cursor: pointer;
               font-size: 14px;
             "
-            onMouseEnter={(e) => e.target.style.background = '#404040'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = "var(--hover-overlay)")
+            }
+            onMouseLeave={(e) => (e.target.style.background = "transparent")}
             onClick={handleImportJMON}
           >
-            <i class="fas fa-upload"></i>
+            <i class="fa-solid fa-upload"></i>
             <span>Import JMON</span>
           </button>
-          
-          <button 
+
+          <button
             style="
-              display: flex; 
-              align-items: center; 
-              gap: 8px; 
-              width: 100%; 
-              padding: 8px 12px; 
-              border: none; 
-              background: transparent; 
-              color: #f5f5f5; 
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              width: 100%;
+              padding: 8px 12px;
+              border: none;
+              background: transparent;
+              color: var(--text-primary);
               cursor: pointer;
               font-size: 14px;
             "
-            onMouseEnter={(e) => e.target.style.background = '#404040'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = "var(--hover-overlay)")
+            }
+            onMouseLeave={(e) => (e.target.style.background = "transparent")}
             onClick={handleExportJMON}
           >
-            <i class="fas fa-download"></i>
+            <i class="fa-solid fa-download"></i>
             <span>Export JMON</span>
           </button>
-          
-          <div style="height: 1px; background: #404040; margin: 4px 0;"></div>
-          
-          <button 
+
+          <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
+
+          {/* Collapsed items for small screens */}
+          <Show when={isCollapsed()}>
+            <button
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 8px 12px;
+                border: none;
+                background: transparent;
+                color: var(--text-primary);
+                cursor: pointer;
+                font-size: 14px;
+              "
+              onMouseEnter={(e) =>
+                (e.target.style.background = "var(--hover-overlay)")
+              }
+              onMouseLeave={(e) => (e.target.style.background = "transparent")}
+              onClick={() => {
+                store.setLooping(!store.isLooping);
+                setIsOpen(false);
+              }}
+            >
+              <i class="fa-solid fa-infinity"></i>
+              <span>{store.isLooping ? "Disable" : "Enable"} Loop</span>
+            </button>
+
+            <button
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 8px 12px;
+                border: none;
+                background: transparent;
+                color: var(--text-primary);
+                cursor: pointer;
+                font-size: 14px;
+              "
+              onMouseEnter={(e) =>
+                (e.target.style.background = "var(--hover-overlay)")
+              }
+              onMouseLeave={(e) => (e.target.style.background = "transparent")}
+              onClick={() => {
+                store.setSnapEnabled(!store.snapEnabled);
+                setIsOpen(false);
+              }}
+            >
+              <i class="fa-solid fa-magnet"></i>
+              <span>{store.snapEnabled ? "Disable" : "Enable"} Snap</span>
+            </button>
+
+            <button
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 8px 12px;
+                border: none;
+                background: transparent;
+                color: var(--text-primary);
+                cursor: pointer;
+                font-size: 14px;
+              "
+              onMouseEnter={(e) =>
+                (e.target.style.background = "var(--hover-overlay)")
+              }
+              onMouseLeave={(e) => (e.target.style.background = "transparent")}
+              onClick={() => {
+                store.autoZoomTimeline();
+                setIsOpen(false);
+              }}
+            >
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>Auto Zoom</span>
+            </button>
+
+            <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
+          </Show>
+
+          <button
             style="
-              display: flex; 
-              align-items: center; 
-              gap: 8px; 
-              width: 100%; 
-              padding: 8px 12px; 
-              border: none; 
-              background: transparent; 
-              color: #f5f5f5; 
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              width: 100%;
+              padding: 8px 12px;
+              border: none;
+              background: transparent;
+              color: var(--text-primary);
               cursor: pointer;
               font-size: 14px;
             "
-            onMouseEnter={(e) => e.target.style.background = '#404040'}
-            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = "var(--hover-overlay)")
+            }
+            onMouseLeave={(e) => (e.target.style.background = "transparent")}
             onClick={() => {
               store.toggleJmonEditor();
               setIsOpen(false);
             }}
           >
-            <i class="fas fa-code"></i>
+            <i class="fa-solid fa-code"></i>
             <span>JMON Editor</span>
           </button>
         </div>

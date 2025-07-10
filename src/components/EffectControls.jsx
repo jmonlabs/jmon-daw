@@ -15,7 +15,7 @@ export default function EffectControls(props) {
         return (
           <>
             <div class="is-flex is-justify-content-space-between is-align-items-center">
-              <span class="has-text-grey-light is-size-7">Wet</span>
+              <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
               <input
                 type="range"
                 min="0"
@@ -24,12 +24,12 @@ export default function EffectControls(props) {
                 value={effect.options.wet || 0.3}
                 onChange={(e) => handleParamChange('wet', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
-              <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.wet || 0.3) * 100)}</span>
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.3) * 100)}</span>
             </div>
             <div class="is-flex is-justify-content-space-between is-align-items-center">
-              <span class="has-text-grey-light is-size-7">Room</span>
+              <span class="is-size-7" style="color: var(--text-muted);">Room</span>
               <input
                 type="range"
                 min="0"
@@ -38,9 +38,9 @@ export default function EffectControls(props) {
                 value={effect.options.roomSize || 0.7}
                 onChange={(e) => handleParamChange('roomSize', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
-              <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.roomSize || 0.7) * 100)}</span>
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.roomSize || 0.7) * 100)}</span>
             </div>
           </>
         );
@@ -58,7 +58,7 @@ export default function EffectControls(props) {
                 value={effect.options.wet || 0.3}
                 onChange={(e) => handleParamChange('wet', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.wet || 0.3) * 100)}</span>
             </div>
@@ -72,7 +72,7 @@ export default function EffectControls(props) {
                 value={effect.options.feedback || 0.4}
                 onChange={(e) => handleParamChange('feedback', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.feedback || 0.4) * 100)}</span>
             </div>
@@ -92,7 +92,7 @@ export default function EffectControls(props) {
                 value={effect.options.frequency || 1000}
                 onChange={(e) => handleParamChange('frequency', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round(effect.options.frequency || 1000)}</span>
             </div>
@@ -106,7 +106,7 @@ export default function EffectControls(props) {
                 value={effect.options.Q || 1}
                 onChange={(e) => handleParamChange('Q', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{(effect.options.Q || 1).toFixed(1)}</span>
             </div>
@@ -126,7 +126,7 @@ export default function EffectControls(props) {
                 value={effect.options.wet || 0.5}
                 onChange={(e) => handleParamChange('wet', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.wet || 0.5) * 100)}</span>
             </div>
@@ -140,7 +140,7 @@ export default function EffectControls(props) {
                 value={effect.options.distortion || 0.4}
                 onChange={(e) => handleParamChange('distortion', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
               <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.distortion || 0.4) * 100)}</span>
             </div>
@@ -151,7 +151,7 @@ export default function EffectControls(props) {
         return (
           <>
             <div class="is-flex is-justify-content-space-between is-align-items-center">
-              <span class="has-text-grey-light is-size-7">Thresh</span>
+              <span class="is-size-7" style="color: var(--text-muted);">Thresh</span>
               <input
                 type="range"
                 min="-60"
@@ -160,12 +160,12 @@ export default function EffectControls(props) {
                 value={effect.options.threshold || -24}
                 onChange={(e) => handleParamChange('threshold', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
-              <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{effect.options.threshold || -24}</span>
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{effect.options.threshold || -24}</span>
             </div>
             <div class="is-flex is-justify-content-space-between is-align-items-center">
-              <span class="has-text-grey-light is-size-7">Ratio</span>
+              <span class="is-size-7" style="color: var(--text-muted);">Ratio</span>
               <input
                 type="range"
                 min="1"
@@ -174,9 +174,9 @@ export default function EffectControls(props) {
                 value={effect.options.ratio || 4}
                 onChange={(e) => handleParamChange('ratio', e.target.value)}
                 class="slider mr-2"
-                style="width: 4rem; accent-color: #007aff;"
+                style="width: 4rem; accent-color: var(--primary-accent);"
               />
-              <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{effect.options.ratio || 4}</span>
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{effect.options.ratio || 4}</span>
             </div>
           </>
         );
@@ -184,7 +184,7 @@ export default function EffectControls(props) {
       default:
         return (
           <div class="is-flex is-justify-content-space-between is-align-items-center">
-            <span class="has-text-grey-light is-size-7">Wet</span>
+            <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
             <input
               type="range"
               min="0"
@@ -193,9 +193,9 @@ export default function EffectControls(props) {
               value={effect.options.wet || 0.5}
               onChange={(e) => handleParamChange('wet', e.target.value)}
               class="slider mr-2"
-              style="width: 4rem; accent-color: #007aff;"
+              style="width: 4rem; accent-color: var(--primary-accent);"
             />
-            <span class="has-text-light is-size-7" style="min-width: 2rem; text-align: right;">{Math.round((effect.options.wet || 0.5) * 100)}</span>
+            <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.5) * 100)}</span>
           </div>
         );
     }

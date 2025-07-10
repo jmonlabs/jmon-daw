@@ -38,8 +38,11 @@ class AudioEngine {
     
     let node;
     
-    // Synth nodes
-    if (['Synth', 'PolySynth', 'MonoSynth', 'AMSynth', 'FMSynth', 'DuoSynth', 'PluckSynth', 'NoiseSynth'].includes(type)) {
+    // Synth nodes - Check for valid Tone.js synth types first
+    const validSynthTypes = ['Synth', 'PolySynth', 'MonoSynth', 'AMSynth', 'FMSynth', 'DuoSynth', 'PluckSynth', 'NoiseSynth', 'MetalSynth', 'MembraneSynth'];
+    
+    if (validSynthTypes.includes(type) || type.includes('Synth')) {
+      // Handle known synth types
       switch (type) {
         case 'PolySynth':
           node = new Tone.PolySynth(options);
@@ -62,7 +65,18 @@ class AudioEngine {
         case 'NoiseSynth':
           node = new Tone.NoiseSynth(options);
           break;
+        case 'MetalSynth':
+          node = new Tone.MetalSynth(options);
+          break;
+        case 'MembraneSynth':
+          node = new Tone.MembraneSynth(options);
+          break;
+        case 'Synth':
+          node = new Tone.Synth(options);
+          break;
         default:
+          // Unknown synth type - fall back to default Synth
+          console.warn(`Unknown synth type: ${type}, falling back to default Synth`);
           node = new Tone.Synth(options);
       }
     }
@@ -170,8 +184,18 @@ class AudioEngine {
       node = Tone.Destination;
     }
     else {
-      console.warn(`Unknown audio node type: ${type}`);
-      return null;
+      console.error(`🚫 AUDIO NODE ERROR: Unknown audio node type "${type}" for id "${id}"`);
+      console.error(`🚫 Available synth types: Synth, PolySynth, MonoSynth, AMSynth, FMSynth, DuoSynth, PluckSynth, NoiseSynth, MetalSynth, MembraneSynth, Sampler`);
+      console.error(`🚫 Falling back to default Synth for unknown type "${type}"`);
+      
+      // Fall back to default Synth to prevent null returns
+      if (type.includes('Synth') || type.includes('synth')) {
+        node = new Tone.Synth(options);
+        console.log(`🎛️ FALLBACK: Created default Synth for unknown type "${type}"`);
+      } else {
+        console.error(`🚫 CRITICAL: Cannot create fallback for non-synth type "${type}"`);
+        return null;
+      }
     }
     
     // Store in audio graph
@@ -214,9 +238,17 @@ class AudioEngine {
   scheduleSequence(sequence, sequenceIndex) {
     const synth = this.getSequenceSynth(sequenceIndex);
     if (!synth || !sequence.notes) {
+      console.warn(`🎵 Cannot schedule sequence ${sequenceIndex} (${sequence.label}): synth=${!!synth}, notes=${!!sequence.notes}`);
       return [];
     }
 
+    // Check for overlapping notes and warn if using monophonic synth
+    const synthType = sequence.synth?.type || 'Synth';
+    this.checkForOverlappingNotes(sequence, synthType);
+
+    console.log(`🎵 Scheduling sequence ${sequenceIndex} (${sequence.label}) with ${sequence.notes.length} notes using synth: ${synth.constructor.name}`);
+    console.log(`🎵 SEQUENCE DEBUG: Notes for ${sequence.label}:`, sequence.notes.map((note, i) => `${i}: ${note.note} at ${note.time}`));
+    
     const scheduledEvents = [];
     
     sequence.notes.forEach((note, noteIndex) => {
@@ -229,7 +261,7 @@ class AudioEngine {
           // Add small offset to prevent timing conflicts
           const playTime = scheduledTime + (noteIndex * 0.001);
           
-          console.log(`🎼 Playing note: ${note.note} at time ${time} (scheduled: ${scheduledTime}, actual: ${playTime})`);
+          console.log(`🎼 Playing note: ${note.note} at time ${time} (scheduled: ${scheduledTime}, actual: ${playTime}) [sequence ${sequenceIndex}]`);
           
           if (Array.isArray(note.note)) {
             // Chord
@@ -364,15 +396,17 @@ class AudioEngine {
     
     console.log(`🎵 Audio Engine Play - Transport state: ${Tone.Transport.state}, Position: ${Tone.Transport.position}, BPM: ${Tone.Transport.bpm.value}`);
     
-    // Simply start or resume the transport - don't reschedule on every play
-    if (Tone.Transport.state === 'stopped') {
-      // Only reschedule if transport was completely stopped
+    // Check if we're starting from the beginning (position 0:0:0)
+    const currentPosition = Tone.Transport.position;
+    const isAtStart = currentPosition === '0:0:0' || currentPosition === '0:0:0.0';
+    
+    if (Tone.Transport.state === 'stopped' || isAtStart) {
+      // Always use full scheduling when starting from the beginning
       this.rescheduleCurrentSequences();
       Tone.Transport.start();
-      console.log(`🎵 Transport started from stopped state`);
+      console.log(`🎵 Transport started from ${isAtStart ? 'beginning' : 'stopped state'}`);
     } else if (Tone.Transport.state === 'paused') {
       // Resume from pause: use current transport position directly
-      // No need to restore position - it should already be where we want it
       console.log(`🔄 Resuming from current transport position: ${Tone.Transport.position}`);
       
       // Reschedule events that haven't played yet from this position
@@ -409,6 +443,9 @@ class AudioEngine {
   rescheduleFromCurrentPosition() {
     if (!this.currentJmonData || !this.currentJmonData.sequences) return 0;
     
+    console.log(`🔄 RESCHEDULING DEBUG: currentJmonData has ${this.currentJmonData.sequences.length} sequences:`, 
+      this.currentJmonData.sequences.map((seq, i) => `${i}: ${seq.label} (${seq.notes?.length || 0} notes)`));
+    
     // Use current transport position directly
     const currentPosition = Tone.Transport.position;
     const currentTransportTime = this.parseTransportPositionToMeasures(currentPosition);
@@ -426,13 +463,18 @@ class AudioEngine {
         if (!synth) return;
         
         let scheduledCount = 0;
+        console.log(`🔄 SEQUENCE ${index} DEBUG: Processing ${sequence.notes.length} notes for ${sequence.label}`);
+        
         sequence.notes.forEach((note, noteIndex) => {
           const originalTime = note.time || note.measure || 0;
           const noteTime = this.parseTime(originalTime);
           const noteTimeInMeasures = this.parseTimeToMeasures(noteTime);
           
+          console.log(`🔄 Note ${noteIndex}: ${note.note} at ${originalTime} (${noteTimeInMeasures} measures) vs current ${currentTransportTime} measures`);
+          
           // Only schedule notes that haven't been played yet
-          if (noteTimeInMeasures >= currentTransportTime) {
+          // Use a small tolerance to avoid floating point precision issues
+          if (noteTimeInMeasures >= currentTransportTime - 0.001) {
             const duration = note.duration;
             
             const eventId = Tone.Transport.schedule((scheduledTime) => {
@@ -451,6 +493,9 @@ class AudioEngine {
             }, noteTime);
             
             scheduledCount++;
+            console.log(`🔄 Scheduled note ${noteIndex}: ${note.note} at ${noteTime}`);
+          } else {
+            console.log(`🔄 Skipped note ${noteIndex}: ${note.note} (already played)`);
           }
         });
         
@@ -608,14 +653,18 @@ class AudioEngine {
     
     // Create synths for sequences and connect them
     if (jmonData.sequences) {
+      console.log(`🎛️ SEQUENCES DEBUG: Building synths for ${jmonData.sequences.length} sequences`);
       jmonData.sequences.forEach((sequence, index) => {
         const synthId = `sequence_synth_${index}`;
+        const synthType = sequence.synth?.type || 'Unknown';
+        console.log(`🎛️ SEQUENCE ${index}: Creating synth "${synthId}" for "${sequence.label}" (type: ${synthType})`);
         
         // Use sequence synth config or synthRef
         if (sequence.synthRef) {
           // Reference to existing audio graph node
           const refNode = this.audioGraph.get(sequence.synthRef);
           this.synths.set(synthId, refNode);
+          console.log(`🎛️ SEQUENCE ${index}: Using synthRef "${sequence.synthRef}"`);
         } else if (sequence.synth) {
           // Create dedicated synth for this sequence
           const synthNode = this.createAudioNode({
@@ -624,7 +673,12 @@ class AudioEngine {
             options: sequence.synth.options || {}
           });
           
-          this.synths.set(synthId, synthNode);
+          if (synthNode) {
+            this.synths.set(synthId, synthNode);
+            console.log(`🎛️ SEQUENCE ${index}: Created synth "${synthId}" successfully (type: ${synthType})`);
+          } else {
+            console.error(`🎛️ SEQUENCE ${index}: Failed to create synth "${synthId}" (type: ${synthType})`);
+          }
           
           // Build effect chain for this track if DAW tracks are provided
           let finalDestination = this.audioGraph.get('master') || Tone.Destination;
@@ -647,6 +701,8 @@ class AudioEngine {
                 console.log(`🎛️ EFFECTS DEBUG: Created effect ${effectConfig.type} for track ${index}, connecting...`);
                 currentNode.connect(effectNode);
                 currentNode = effectNode;
+              } else {
+                console.error(`🎛️ EFFECTS DEBUG: Failed to create effect ${effectConfig.type} for track ${index}`);
               }
             });
             
@@ -655,9 +711,15 @@ class AudioEngine {
             console.log(`🎛️ EFFECTS DEBUG: Connected effect chain to master for track ${index}`);
           } else {
             // No effects, connect directly to master
-            synthNode.connect(finalDestination);
-            console.log(`🎛️ EFFECTS DEBUG: No effects for track ${index}, connecting directly to master`);
+            if (synthNode) {
+              synthNode.connect(finalDestination);
+              console.log(`🎛️ EFFECTS DEBUG: No effects for track ${index}, connecting directly to master`);
+            } else {
+              console.error(`🎛️ EFFECTS DEBUG: Cannot connect null synthNode for track ${index}`);
+            }
           }
+        } else {
+          console.warn(`🎛️ SEQUENCE ${index}: No synth config found for sequence "${sequence.label}"`);
         }
       });
     }
@@ -720,7 +782,9 @@ class AudioEngine {
   // Get synth for sequence (by index or ID)
   getSequenceSynth(sequenceIndex) {
     const synthId = `sequence_synth_${sequenceIndex}`;
-    return this.synths.get(synthId);
+    const synth = this.synths.get(synthId);
+    console.log(`🎛️ Getting synth for sequence ${sequenceIndex}: ${synthId} -> ${synth ? synth.constructor.name : 'NOT FOUND'}`);
+    return synth;
   }
   
   // Update track volume and pan controls
@@ -728,7 +792,11 @@ class AudioEngine {
     const synth = this.getSequenceSynth(trackIndex);
     if (synth && synth.volume) {
       // Convert 0-1 to dB (-60 to 0)
-      synth.volume.value = -60 + (volume * 60);
+      const dbValue = -60 + (volume * 60);
+      synth.volume.value = dbValue;
+      console.log(`🔊 Track ${trackIndex} volume updated to ${volume} (${dbValue.toFixed(1)} dB)`);
+    } else {
+      console.warn(`⚠️ Cannot update volume for track ${trackIndex} - synth not found or has no volume control`);
     }
   }
   
@@ -745,6 +813,101 @@ class AudioEngine {
         synth._panner.pan.value = pan;
       }
     }
+  }
+  
+  updateTrackMute(trackIndex, muted) {
+    const synth = this.getSequenceSynth(trackIndex);
+    if (synth && synth.volume) {
+      // Always store original volume if not already stored
+      if (synth._originalVolume === undefined) {
+        synth._originalVolume = synth.volume.value;
+        console.log(`💾 Stored original volume for track ${trackIndex}: ${synth._originalVolume}`);
+      }
+      
+      if (muted) {
+        synth.volume.value = -Infinity; // Mute
+        console.log(`🔇 Track ${trackIndex} muted (original: ${synth._originalVolume})`);
+      } else {
+        // Restore original volume
+        synth.volume.value = synth._originalVolume;
+        console.log(`🔊 Track ${trackIndex} unmuted, restored to: ${synth._originalVolume}`);
+      }
+    } else {
+      console.warn(`⚠️ Could not find synth or volume for track ${trackIndex}`);
+    }
+  }
+  
+  updateTrackSolo(trackIndex, solo, allTracksState = null) {
+    // Solo implementation: properly handle multiple soloed tracks
+    const allSynths = [];
+    for (let i = 0; i < this.currentSequences.length; i++) {
+      const synth = this.getSequenceSynth(i);
+      if (synth) {
+        allSynths.push({ index: i, synth });
+      }
+    }
+    
+    if (solo) {
+      console.log(`🎯 Track ${trackIndex} soloed`);
+    } else {
+      console.log(`🎯 Track ${trackIndex} unsoloed`);
+    }
+    
+    // We need to update all tracks based on the new solo state
+    // This will be called from the store with proper track state information
+    this.updateAllTracksSoloState(allTracksState);
+  }
+  
+  // Helper method to update all tracks based on solo states
+  updateAllTracksSoloState(tracksState) {
+    if (!tracksState) {
+      console.warn(`⚠️ updateAllTracksSoloState called with null/undefined tracksState`);
+      return;
+    }
+    
+    // Check if any track is soloed
+    const hasSoloedTracks = tracksState.some(track => track.solo);
+    
+    console.log(`🔊 Updating all tracks solo state. Has soloed tracks: ${hasSoloedTracks}, tracks count: ${tracksState.length}`);
+    
+    tracksState.forEach((track, index) => {
+      const synth = this.getSequenceSynth(index);
+      if (synth) {
+        if (synth.volume) {
+          // Initialize original volume if not set (use a reasonable default)
+          if (synth._originalVolume === undefined) {
+            // Default volume for new synths (Tone.js default is around -10 to 0 dB)
+            synth._originalVolume = 0; // 0 dB
+            synth.volume.value = synth._originalVolume;
+            console.log(`💾 Initialized original volume for track ${index}: ${synth._originalVolume} dB`);
+          }
+          
+          let shouldBeAudible = false;
+          
+          if (hasSoloedTracks) {
+            // If there are soloed tracks, only non-muted soloed tracks should be audible
+            shouldBeAudible = track.solo && !track.muted;
+            console.log(`🔊 Track ${index} "${track.name}" (solo=${track.solo}, muted=${track.muted}): ${shouldBeAudible ? 'AUDIBLE' : 'SILENT'}`);
+          } else {
+            // No tracks soloed, respect only mute states
+            shouldBeAudible = !track.muted;
+            console.log(`🔊 Track ${index} "${track.name}" (muted=${track.muted}): ${shouldBeAudible ? 'AUDIBLE' : 'SILENT'}`);
+          }
+          
+          if (shouldBeAudible) {
+            synth.volume.value = synth._originalVolume;
+            console.log(`🔊 Track ${index} volume set to: ${synth.volume.value} dB`);
+          } else {
+            synth.volume.value = -Infinity;
+            console.log(`🔇 Track ${index} muted (volume set to -Infinity)`);
+          }
+        } else {
+          console.warn(`⚠️ Track ${index} synth has no volume control`);
+        }
+      } else {
+        console.warn(`⚠️ No synth found for track ${index}`);
+      }
+    });
   }
   
   // Update effect parameters in real-time
@@ -778,6 +941,16 @@ class AudioEngine {
     if (master) {
       this.audioGraph.set('master', master);
     }
+    
+    // Also clear all synths to ensure they get recreated
+    this.synths.forEach(synth => {
+      if (synth && synth.dispose) {
+        synth.dispose();
+      }
+    });
+    this.synths.clear();
+    
+    console.log('🧹 Audio graph and synths cleared');
   }
   
   // Schedule JMON automation events
@@ -847,6 +1020,208 @@ class AudioEngine {
     
     // Clear audio graph
     this.clearAudioGraph();
+  }
+
+  // Set master volume
+  setMasterVolume(volume) {
+    const masterNode = this.audioGraph.get('master');
+    if (masterNode && masterNode.volume) {
+      // Convert 0-1 to dB (-60 to 0)
+      const dbValue = volume === 0 ? -60 : -60 + (volume * 60);
+      masterNode.volume.value = dbValue;
+      console.log(`🔊 Master volume set to ${volume} (${dbValue.toFixed(1)} dB)`);
+    } else {
+      console.warn('⚠️ Master node not found or has no volume control');
+    }
+  }
+
+  // Set master effects chain
+  setMasterEffects(effects) {
+    console.log('🎛️ Setting master effects:', effects);
+    // This would require rebuilding the master effects chain
+    // For now, just log the effects
+    // TODO: Implement master effects chain rebuilding
+  }
+
+  // Check for overlapping notes in monophonic synths and warn user
+  checkForOverlappingNotes(sequence, synthType) {
+    if (!sequence.notes || sequence.notes.length === 0) return;
+    
+    // Only check for monophonic synths
+    const monophonicSynths = ['Synth', 'MonoSynth', 'AMSynth', 'FMSynth', 'DuoSynth', 'PluckSynth', 'MetalSynth', 'MembraneSynth'];
+    if (!monophonicSynths.includes(synthType)) {
+      console.log(`🎵 POLYPHONY CHECK: Skipping check for polyphonic synth "${synthType}"`);
+      return;
+    }
+    
+    console.log(`🎵 POLYPHONY CHECK: Checking ${sequence.notes.length} notes for monophonic synth "${synthType}" in track "${sequence.label}"`);
+    
+    // Parse and sort notes by time, converting to seconds
+    const notesWithTime = sequence.notes.map(note => {
+      const timeStr = this.parseTime(note.time || note.measure || 0);
+      const durationStr = note.duration || '4n';
+      
+      // Convert time strings to seconds using Tone.js
+      let startTimeSeconds = 0;
+      let durationSeconds = 0;
+      
+      try {
+        // Use Tone.Time to convert to seconds
+        startTimeSeconds = Tone.Time(timeStr).toSeconds();
+        durationSeconds = Tone.Time(durationStr).toSeconds();
+      } catch (error) {
+        console.warn(`Error parsing time for note ${note.note}:`, error);
+        startTimeSeconds = 0;
+        durationSeconds = Tone.Time('4n').toSeconds(); // Default to quarter note
+      }
+      
+      console.log(`🎵 POLYPHONY CHECK: Note ${note.note} - original time: ${note.time} -> parsed: ${timeStr} -> seconds: ${startTimeSeconds.toFixed(3)}, duration: ${durationSeconds.toFixed(3)}`);
+      
+      return {
+        ...note,
+        startTime: startTimeSeconds,
+        endTime: startTimeSeconds + durationSeconds,
+        duration: durationSeconds
+      };
+    }).sort((a, b) => a.startTime - b.startTime);
+    
+    const overlaps = [];
+    const simultaneousNotes = [];
+    
+    // Check for overlapping notes
+    for (let i = 0; i < notesWithTime.length - 1; i++) {
+      const currentNote = notesWithTime[i];
+      
+      for (let j = i + 1; j < notesWithTime.length; j++) {
+        const nextNote = notesWithTime[j];
+        
+        // Check if notes overlap (with small tolerance for floating point errors)
+        const tolerance = 0.001; // 1ms tolerance
+        
+        if (nextNote.startTime < currentNote.endTime - tolerance) {
+          // Check if they start at exactly the same time
+          if (Math.abs(nextNote.startTime - currentNote.startTime) < tolerance) {
+            // Same start time - add to simultaneous notes
+            const existingGroup = simultaneousNotes.find(group => 
+              group.some(note => Math.abs(note.startTime - currentNote.startTime) < tolerance)
+            );
+            
+            if (existingGroup) {
+              if (!existingGroup.some(note => note.note === nextNote.note)) {
+                existingGroup.push(nextNote);
+              }
+            } else {
+              simultaneousNotes.push([currentNote, nextNote]);
+            }
+          } else {
+            // Different start times but overlapping - add to overlaps
+            overlaps.push({
+              note1: currentNote,
+              note2: nextNote,
+              overlapStart: nextNote.startTime,
+              overlapEnd: Math.min(currentNote.endTime, nextNote.endTime)
+            });
+          }
+        }
+      }
+    }
+    
+    console.log(`🎵 POLYPHONY CHECK: Found ${overlaps.length} overlapping notes and ${simultaneousNotes.length} groups of simultaneous notes`);
+    
+    // Display warnings - both in console and UI
+    if (overlaps.length > 0) {
+      console.warn(`⚠️ POLYPHONY WARNING: Track "${sequence.label}" using monophonic synth "${synthType}" has ${overlaps.length} overlapping notes:`);
+      overlaps.forEach((overlap, i) => {
+        console.warn(`  ${i + 1}. ${overlap.note1.note} (${overlap.note1.time}) overlaps with ${overlap.note2.note} (${overlap.note2.time})`);
+      });
+      console.warn(`💡 SUGGESTION: Consider using "PolySynth" for polyphonic playback`);
+      
+      // Add UI notification
+      this.addPolyphonyNotification(sequence.label, synthType, overlaps, 'overlapping');
+    }
+    
+    if (simultaneousNotes.length > 0) {
+      console.warn(`⚠️ POLYPHONY WARNING: Track "${sequence.label}" using monophonic synth "${synthType}" has notes at the same time:`);
+      simultaneousNotes.forEach(group => {
+        const timeStr = group[0].time || group[0].measure || '0:0:0';
+        const noteNames = group.map(n => n.note).join(', ');
+        console.warn(`  At ${timeStr}: ${noteNames} (only the last note will be heard)`);
+      });
+      console.warn(`💡 SUGGESTION: Consider using "PolySynth" for polyphonic playback`);
+      
+      // Add UI notification
+      this.addPolyphonyNotification(sequence.label, synthType, simultaneousNotes, 'simultaneous');
+    }
+    
+    // Return true if any polyphony issues were found
+    return overlaps.length > 0 || simultaneousNotes.length > 0;
+  }
+
+  // Add polyphony notification to UI
+  addPolyphonyNotification(trackLabel, synthType, issues, type) {
+    console.log(`🎵 POLYPHONY NOTIFICATION: Attempting to add notification for ${trackLabel} (${synthType})`);
+    console.log(`🎵 POLYPHONY NOTIFICATION: window.dawStore available:`, !!window.dawStore);
+    console.log(`🎵 POLYPHONY NOTIFICATION: addPolyphonyWarning available:`, !!(window.dawStore && window.dawStore.addPolyphonyWarning));
+    
+    // Use a global reference to avoid circular dependency
+    if (window.dawStore && window.dawStore.addPolyphonyWarning) {
+      let detailsMessage = '';
+      if (type === 'overlapping') {
+        detailsMessage = `${issues.length} overlapping notes detected. Notes will cut off previous notes.`;
+      } else if (type === 'simultaneous') {
+        detailsMessage = `${issues.length} groups of simultaneous notes detected. Only the last note in each group will be heard.`;
+      } else if (type === 'test') {
+        detailsMessage = `Test notification for polyphony system.`;
+      }
+      
+      console.log(`🎵 POLYPHONY NOTIFICATION: Calling addPolyphonyWarning with message:`, detailsMessage);
+      try {
+        window.dawStore.addPolyphonyWarning(trackLabel, synthType, detailsMessage);
+        console.log(`🎵 POLYPHONY NOTIFICATION: Successfully called addPolyphonyWarning`);
+      } catch (error) {
+        console.error(`🎵 POLYPHONY NOTIFICATION: Error calling addPolyphonyWarning:`, error);
+      }
+    } else {
+      console.error('🎵 POLYPHONY NOTIFICATION: Store not available on window object');
+      console.log('🎵 POLYPHONY NOTIFICATION: window.dawStore:', window.dawStore);
+      
+      // Fallback: try direct import
+      import('../stores/dawStore').then(({ useDawStore }) => {
+        const store = useDawStore();
+        console.log(`🎵 POLYPHONY NOTIFICATION: Fallback import - store available:`, !!store);
+        console.log(`🎵 POLYPHONY NOTIFICATION: Fallback import - addPolyphonyWarning available:`, !!(store && store.addPolyphonyWarning));
+        
+        if (store && store.addPolyphonyWarning) {
+          let detailsMessage = '';
+          if (type === 'overlapping') {
+            detailsMessage = `${issues.length} overlapping notes detected. Notes will cut off previous notes.`;
+          } else if (type === 'simultaneous') {
+            detailsMessage = `${issues.length} groups of simultaneous notes detected. Only the last note in each group will be heard.`;
+          } else if (type === 'test') {
+            detailsMessage = `Test notification for polyphony system.`;
+          }
+          
+          console.log(`🎵 POLYPHONY NOTIFICATION: Fallback calling addPolyphonyWarning with message:`, detailsMessage);
+          try {
+            store.addPolyphonyWarning(trackLabel, synthType, detailsMessage);
+            console.log(`🎵 POLYPHONY NOTIFICATION: Fallback successfully called addPolyphonyWarning`);
+          } catch (error) {
+            console.error(`🎵 POLYPHONY NOTIFICATION: Fallback error calling addPolyphonyWarning:`, error);
+          }
+        }
+      }).catch(error => {
+        console.error('🎵 POLYPHONY NOTIFICATION: Error importing store:', error);
+      });
+    }
+  }
+  
+  // Debug method to check synth types
+  debugSynthTypes() {
+    console.log('🔍 DEBUG: Current synth types:');
+    this.synths.forEach((synth, id) => {
+      console.log(`  ${id}: ${synth.constructor.name}`);
+    });
+    return this.synths;
   }
 }
 

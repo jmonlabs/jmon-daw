@@ -1,0 +1,1147 @@
+/* JMON DAW - Modern Theme System */
+
+/* ========================================
+   One Light Theme (Default)
+   ======================================== */
+
+:root {
+    /* One Light Base Colors */
+    --one-light-bg: #fafafa;
+    --one-light-bg-secondary: #f5f5f5;
+    --one-light-bg-tertiary: #eeeeee;
+    --one-light-text: #383a42;
+    --one-light-text-secondary: #a0a1a7;
+    --one-light-text-muted: #9ca0a6;
+    --one-light-border: #e5e5e6;
+    --one-light-border-light: #f0f0f1;
+    
+    /* One Light Accent Palette */
+    --one-light-red: #e45649;
+    --one-light-green: #50a14f;
+    --one-light-yellow: #c18401;
+    --one-light-blue: #4078f2;
+    --one-light-blue-hover: #5086f5;
+    --one-light-purple: #a626a4;
+    --one-light-cyan: #0184bc;
+    --one-light-orange: #da6c00;
+
+    /* Core System Colors */
+    --color-bg-primary: var(--one-light-bg);
+    --color-bg-secondary: var(--one-light-bg-secondary);
+    --color-bg-surface: #ffffff;
+    --color-bg-elevated: #ffffff;
+    --color-bg-modal: #ffffff;
+    --color-bg-overlay: rgba(56, 58, 66, 0.8);
+
+    /* Text Colors */
+    --color-text-primary: var(--one-light-text);
+    --color-text-secondary: var(--one-light-text-secondary);
+    --color-text-muted: var(--one-light-text-muted);
+    --color-text-inverse: #ffffff;
+    --color-text-on-accent: #ffffff;
+
+    /* Border Colors */
+    --color-border-primary: var(--one-light-border);
+    --color-border-secondary: var(--one-light-border-light);
+    --color-border-focus: var(--one-light-blue);
+    --color-border-active: var(--one-light-blue);
+
+    /* Accent Colors */
+    --color-accent-primary: var(--one-light-blue);
+    --color-accent-secondary: var(--one-light-purple);
+    --color-accent-tertiary: var(--one-light-cyan);
+
+    /* Button Colors */
+    --color-button-primary: var(--one-light-blue);
+    --color-button-primary-hover: #2c5ae0;
+    --color-button-secondary: var(--one-light-bg-secondary);
+    --color-button-secondary-hover: var(--one-light-bg-tertiary);
+    --color-button-tertiary: transparent;
+    --color-button-tertiary-hover: var(--one-light-bg-secondary);
+    --color-button-disabled: var(--one-light-bg-tertiary);
+
+    /* Status Colors */
+    --color-success: var(--one-light-green);
+    --color-warning: var(--one-light-yellow);
+    --color-error: var(--one-light-red);
+    --color-info: var(--one-light-blue);
+    --color-info-hover: var(--one-light-blue-hover);
+    --color-surface-hover: var(--one-light-gray-100);
+
+    /* DAW Specific Colors */
+    --color-track-bg: var(--color-bg-surface);
+    --color-track-bg-selected: rgba(64, 120, 242, 0.08);
+    --color-track-bg-hover: var(--one-light-bg-secondary);
+    --color-track-border: var(--color-border-primary);
+
+    --color-note-bg: var(--one-light-blue);
+    --color-note-bg-hover: #2c5ae0;
+    --color-note-border: var(--one-light-blue);
+    --color-note-border-selected: var(--one-light-purple);
+    --color-note-text: #ffffff;
+
+    --color-timeline-bg: var(--color-bg-surface);
+    --color-timeline-grid: var(--color-border-secondary);
+    --color-timeline-ruler: var(--color-bg-elevated);
+
+    --color-playhead: var(--one-light-red);
+    --color-loop-region: rgba(64, 120, 242, 0.12);
+    --color-loop-border: var(--one-light-blue);
+
+    /* Transport Controls */
+    --color-play: var(--one-light-green);
+    --color-pause: var(--one-light-yellow);
+    --color-stop: var(--one-light-red);
+    --color-record: var(--one-light-red);
+
+    /* Effects & Synth Colors */
+    --color-synth-bg: var(--one-light-blue);
+    --color-synth-text: #ffffff;
+    --color-effect-bg: var(--one-light-purple);
+    --color-effect-text: #ffffff;
+    --color-master-bg: var(--one-light-cyan);
+    --color-master-text: #ffffff;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(56, 58, 66, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(56, 58, 66, 0.1), 0 1px 2px 0 rgba(56, 58, 66, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(56, 58, 66, 0.1), 0 2px 4px -1px rgba(56, 58, 66, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(56, 58, 66, 0.1), 0 4px 6px -2px rgba(56, 58, 66, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(56, 58, 66, 0.1), 0 10px 10px -5px rgba(56, 58, 66, 0.04);
+
+    /* Transitions */
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    /* Border Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
+
+    /* Typography */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* Legacy Variable Mappings */
+    --bulma-scheme-main: var(--color-bg-primary);
+    --bulma-scheme-main-ter: var(--color-bg-elevated);
+    --bulma-border: var(--color-border-primary);
+    --bulma-primary: var(--color-accent-primary);
+    --bulma-danger: var(--color-error);
+    --bulma-success: var(--color-success);
+    --bulma-warning: var(--color-warning);
+    --bulma-info: var(--color-info);
+
+    --surface-bg: var(--color-bg-surface);
+    --elevated-bg: var(--color-bg-elevated);
+    --track-bg: var(--color-track-bg);
+    --track-bg-selected: var(--color-track-bg-selected);
+    --border-color: var(--color-border-primary);
+    --border-active: var(--color-border-active);
+    
+    --button-bg: var(--color-button-secondary);
+    --button-hover: var(--color-button-secondary-hover);
+    
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --text-inverse: var(--color-text-inverse);
+    
+    --primary-accent: var(--color-accent-primary);
+    --secondary-accent: var(--color-accent-secondary);
+    --danger-accent: var(--color-error);
+    --warning-color: var(--color-warning);
+    --info-color: var(--color-info);
+    --info-hover: var(--color-info-hover);
+    --surface-hover: var(--color-surface-hover);
+    
+    --note-bg: var(--color-note-bg);
+    --note-bg-hover: var(--color-note-bg-hover);
+    --note-border: var(--color-note-border);
+    --note-border-selected: var(--color-note-border-selected);
+    --note-text: var(--color-note-text);
+    
+    --loop-region: var(--color-loop-region);
+    --hover-overlay: rgba(0, 0, 0, 0.05);
+    --focus-ring: var(--color-border-focus);
+}
+
+/* ========================================
+   One Dark Theme
+   ======================================== */
+
+[data-theme="dark"] {
+    /* One Dark Base Colors */
+    --one-dark-bg: #282c34;
+    --one-dark-bg-secondary: #21252b;
+    --one-dark-bg-tertiary: #1e2127;
+    --one-dark-text: #abb2bf;
+    --one-dark-text-secondary: #5c6370;
+    --one-dark-text-muted: #4b5263;
+    --one-dark-border: #3e4451;
+    --one-dark-border-light: #2c313c;
+    
+    /* One Dark Accent Palette */
+    --one-dark-red: #e06c75;
+    --one-dark-green: #98c379;
+    --one-dark-yellow: #e5c07b;
+    --one-dark-blue: #61afef;
+    --one-dark-blue-hover: #7bb9f2;
+    --one-dark-purple: #c678dd;
+    --one-dark-cyan: #56b6c2;
+    --one-dark-orange: #d19a66;
+
+    /* Core System Colors */
+    --color-bg-primary: var(--one-dark-bg);
+    --color-bg-secondary: var(--one-dark-bg-secondary);
+    --color-bg-surface: var(--one-dark-bg-secondary);
+    --color-bg-elevated: #2c313c;
+    --color-bg-modal: #2c313c;
+    --color-bg-overlay: rgba(40, 44, 52, 0.9);
+
+    /* Text Colors */
+    --color-text-primary: var(--one-dark-text);
+    --color-text-secondary: var(--one-dark-text-secondary);
+    --color-text-muted: var(--one-dark-text-muted);
+    --color-text-inverse: var(--one-dark-bg);
+    --color-text-on-accent: var(--one-dark-bg);
+
+    /* Border Colors */
+    --color-border-primary: var(--one-dark-border);
+    --color-border-secondary: var(--one-dark-border-light);
+    --color-border-focus: var(--one-dark-blue);
+    --color-border-active: var(--one-dark-blue);
+
+    /* Accent Colors */
+    --color-accent-primary: var(--one-dark-blue);
+    --color-accent-secondary: var(--one-dark-purple);
+    --color-accent-tertiary: var(--one-dark-cyan);
+
+    /* Button Colors */
+    --color-button-primary: var(--one-dark-blue);
+    --color-button-primary-hover: #4c9fff;
+    --color-button-secondary: var(--one-dark-bg-tertiary);
+    --color-button-secondary-hover: var(--one-dark-border);
+    --color-button-tertiary: transparent;
+    --color-button-tertiary-hover: var(--one-dark-bg-tertiary);
+    --color-button-disabled: var(--one-dark-border-light);
+
+    /* Status Colors */
+    --color-success: var(--one-dark-green);
+    --color-warning: var(--one-dark-yellow);
+    --color-error: var(--one-dark-red);
+    --color-info: var(--one-dark-blue);
+    --color-info-hover: var(--one-dark-blue-hover);
+    --color-surface-hover: var(--one-dark-gray-lighter);
+
+    /* DAW Specific Colors */
+    --color-track-bg: var(--color-bg-surface);
+    --color-track-bg-selected: rgba(97, 175, 239, 0.12);
+    --color-track-bg-hover: var(--one-dark-bg-tertiary);
+    --color-track-border: var(--color-border-primary);
+
+    --color-note-bg: var(--one-dark-blue);
+    --color-note-bg-hover: #4c9fff;
+    --color-note-border: var(--one-dark-blue);
+    --color-note-border-selected: var(--one-dark-purple);
+    --color-note-text: var(--one-dark-bg);
+
+    --color-timeline-bg: var(--color-bg-surface);
+    --color-timeline-grid: var(--color-border-secondary);
+    --color-timeline-ruler: var(--color-bg-elevated);
+
+    --color-playhead: var(--one-dark-red);
+    --color-loop-region: rgba(97, 175, 239, 0.15);
+    --color-loop-border: var(--one-dark-blue);
+
+    /* Transport Controls */
+    --color-play: var(--one-dark-green);
+    --color-pause: var(--one-dark-yellow);
+    --color-stop: var(--one-dark-red);
+    --color-record: var(--one-dark-red);
+
+    /* Effects & Synth Colors */
+    --color-synth-bg: var(--one-dark-blue);
+    --color-synth-text: var(--one-dark-bg);
+    --color-effect-bg: var(--one-dark-purple);
+    --color-effect-text: var(--one-dark-bg);
+    --color-master-bg: var(--one-dark-cyan);
+    --color-master-text: var(--one-dark-bg);
+
+    /* Shadows for dark theme */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
+
+    /* Override legacy variables */
+    --bulma-scheme-main: var(--color-bg-primary);
+    --bulma-scheme-main-ter: var(--color-bg-elevated);
+    --bulma-border: var(--color-border-primary);
+    --surface-bg: var(--color-bg-surface);
+    --elevated-bg: var(--color-bg-elevated);
+    --track-bg: var(--color-track-bg);
+    --track-bg-selected: var(--color-track-bg-selected);
+    --border-color: var(--color-border-primary);
+    --border-active: var(--color-border-active);
+    --button-bg: var(--color-button-secondary);
+    --button-hover: var(--color-button-secondary-hover);
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --text-inverse: var(--color-text-inverse);
+    --primary-accent: var(--color-accent-primary);
+    --secondary-accent: var(--color-accent-secondary);
+    --danger-accent: var(--color-error);
+    --warning-color: var(--color-warning);
+    --info-color: var(--color-info);
+    --info-hover: var(--color-info-hover);
+    --surface-hover: var(--color-surface-hover);
+    --secondary-bg: var(--color-synth-bg);
+    
+    --note-bg: var(--color-note-bg);
+    --note-bg-hover: var(--color-note-bg-hover);
+    --note-border: var(--color-note-border);
+    --note-border-selected: var(--color-note-border-selected);
+    --note-text: var(--color-note-text);
+    
+    --loop-region: var(--color-loop-region);
+    --hover-overlay: rgba(255, 255, 255, 0.1);
+    --focus-ring: var(--color-border-focus);
+}
+
+/* ========================================
+   Global Styles
+   ======================================== */
+
+body {
+    background-color: var(--color-bg-primary) !important;
+    color: var(--color-text-primary) !important;
+    transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+.daw-container {
+    background-color: var(--color-bg-primary) !important;
+}
+
+/* Header & Navigation */
+header {
+    background-color: var(--color-bg-surface) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+.navbar {
+    background-color: var(--color-bg-surface) !important;
+    border-bottom: 1px solid var(--color-border-primary) !important;
+}
+
+.navbar-item {
+    color: var(--color-text-primary) !important;
+}
+
+.navbar-item:hover {
+    background-color: var(--hover-overlay) !important;
+}
+
+/* Timeline & Ruler */
+.timeline-ruler,
+.ruler-content {
+    background-color: var(--color-timeline-ruler) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+/* Track Components */
+.track-row {
+    background-color: var(--color-track-bg) !important;
+    border-color: var(--color-track-border) !important;
+}
+
+.track-row:hover {
+    background-color: var(--color-track-bg-hover) !important;
+}
+
+.track-row.selected {
+    background-color: var(--color-track-bg-selected) !important;
+}
+
+.track-info-section {
+    background-color: var(--color-track-bg) !important;
+    border-color: var(--color-track-border) !important;
+}
+
+.track-lane-section {
+    background-color: var(--color-timeline-bg) !important;
+}
+
+.track-effects-section {
+    background-color: var(--color-track-bg) !important;
+    border-color: var(--color-track-border) !important;
+}
+
+/* Piano Roll & Notes */
+.track-lane {
+    background-color: var(--color-timeline-bg) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-track-border) !important;
+}
+
+.note {
+    background-color: var(--color-note-bg) !important;
+    border-color: var(--color-note-border) !important;
+    color: var(--color-note-text) !important;
+}
+
+.note:hover {
+    background-color: var(--color-note-bg-hover) !important;
+}
+
+.note.selected {
+    border-color: var(--color-note-border-selected) !important;
+    box-shadow: 0 0 0 2px var(--color-note-border-selected) !important;
+}
+
+/* Buttons */
+.button,
+.btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: var(--color-button-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-primary) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    line-height: 1.5 !important;
+    min-height: 2.25rem !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: all var(--transition-fast) !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+}
+
+.button:hover,
+.btn:hover {
+    background-color: var(--color-button-secondary-hover) !important;
+    border-color: var(--color-border-active) !important;
+}
+
+.button.is-primary,
+.btn-primary {
+    background-color: var(--color-button-primary) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-button-primary) !important;
+}
+
+.button.is-primary:hover,
+.btn-primary:hover {
+    background-color: var(--color-button-primary-hover) !important;
+}
+
+.button.is-success {
+    background-color: var(--color-success) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-success) !important;
+}
+
+.button.is-warning {
+    background-color: var(--color-warning) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-warning) !important;
+}
+
+.button.is-danger {
+    background-color: var(--color-error) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-error) !important;
+}
+
+.button.is-info {
+    background-color: var(--color-info) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-info) !important;
+}
+
+/* Button Variants */
+.btn-secondary {
+    background-color: var(--color-button-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-button-secondary-hover) !important;
+    border-color: var(--color-border-active) !important;
+}
+
+/* Transport Controls */
+.transport-controls .button {
+    background-color: var(--color-button-secondary) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+.transport-controls .play-button {
+    background-color: var(--color-play) !important;
+    color: var(--color-text-on-accent) !important;
+}
+
+.transport-controls .stop-button {
+    background-color: var(--color-stop) !important;
+    color: var(--color-text-on-accent) !important;
+}
+
+.transport-controls .pause-button {
+    background-color: var(--color-pause) !important;
+    color: var(--color-text-on-accent) !important;
+}
+
+.transport-controls .record-button {
+    background-color: var(--color-record) !important;
+    color: var(--color-text-on-accent) !important;
+}
+
+/* Effects & Synth Boxes */
+.synth-box {
+    background-color: var(--color-synth-bg) !important;
+    color: var(--color-synth-text) !important;
+}
+
+.effect-box {
+    background-color: var(--color-effect-bg) !important;
+    color: var(--color-effect-text) !important;
+}
+
+.master-box {
+    background-color: var(--color-master-bg) !important;
+    color: var(--color-master-text) !important;
+}
+
+/* Modal & Overlays */
+.modal-content,
+.dropdown-content {
+    background-color: var(--color-bg-modal) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-primary) !important;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Context Menu */
+.context-menu {
+    background-color: var(--color-bg-modal) !important;
+    border-color: var(--color-border-primary) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.context-menu .dropdown-item {
+    color: var(--color-text-primary) !important;
+}
+
+.context-menu .dropdown-item:hover {
+    background-color: var(--color-button-tertiary-hover) !important;
+}
+
+.dropdown-item:hover {
+    background-color: var(--hover-overlay) !important;
+}
+
+/* Form Controls */
+.input, .textarea, .select select {
+    background-color: var(--color-bg-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+.input:focus, .textarea:focus, .select select:focus {
+    border-color: var(--color-border-focus) !important;
+    box-shadow: 0 0 0 2px rgba(97, 175, 239, 0.2) !important;
+}
+
+.input::placeholder {
+    color: var(--color-text-muted) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border-primary);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+}
+
+/* Firefox scrollbars */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-primary) var(--color-bg-secondary);
+}
+
+/* Selection */
+::selection {
+    background-color: var(--color-accent-primary);
+    color: var(--color-text-on-accent);
+}
+
+/* Focus Indicators */
+*:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+}
+
+button:focus-visible, .button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-border-focus);
+}
+
+/* Transitions for theme switching */
+* {
+    transition: background-color var(--transition-normal), 
+                color var(--transition-normal), 
+                border-color var(--transition-normal);
+}
+
+/* Layout and Alignment Fixes */
+.level, .level-left, .level-right, .level-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.level {
+    justify-content: space-between !important;
+}
+
+.level-left {
+    justify-content: flex-start !important;
+}
+
+.level-right {
+    justify-content: flex-end !important;
+}
+
+/* Fix button groups alignment */
+.field.has-addons .control .button,
+.field.has-addons .control .input {
+    border-radius: 0 !important;
+    margin-left: -1px !important;
+}
+
+.field.has-addons .control:first-child .button,
+.field.has-addons .control:first-child .input {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+    margin-left: 0 !important;
+}
+
+.field.has-addons .control:last-child .button,
+.field.has-addons .control:last-child .input {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+}
+
+/* Fix snap button and transport controls alignment */
+.transport-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.transport-controls .button {
+    min-width: 2.5rem !important;
+    height: 2.5rem !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Fix header alignment */
+header .level {
+    margin: 0 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+/* Fix track controls alignment */
+.track-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+}
+
+.track-controls .button {
+    min-width: 1.75rem !important;
+    height: 1.75rem !important;
+    padding: 0 !important;
+    font-size: 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Fix form controls alignment */
+.field.is-grouped {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.field.is-grouped .control {
+    margin-right: 0 !important;
+}
+
+/* Fix modal alignment */
+.modal-card-head,
+.modal-card-body,
+.modal-card-foot {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.modal-card-head {
+    justify-content: space-between !important;
+}
+
+.modal-card-foot {
+    justify-content: flex-end !important;
+    gap: 0.5rem !important;
+}
+
+/* Button Variants */
+.btn-secondary {
+    background-color: var(--color-button-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-button-secondary-hover) !important;
+    border-color: var(--color-border-active) !important;
+}
+
+/* Toggle Button Styles */
+.btn-toggle {
+    background-color: var(--color-button-tertiary) !important;
+    color: var(--color-text-secondary) !important;
+    border-color: var(--color-border-primary) !important;
+    transition: all var(--transition-fast) !important;
+}
+
+.btn-toggle:hover {
+    background-color: var(--color-button-tertiary-hover) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.btn-toggle.active {
+    background-color: var(--color-accent-primary) !important;
+    color: var(--color-text-on-accent) !important;
+    border-color: var(--color-accent-primary) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn-toggle.active:hover {
+    background-color: var(--color-accent-primary) !important;
+    opacity: 0.9 !important;
+}
+
+/* Button Groups */
+.btn-group {
+    display: inline-flex !important;
+    vertical-align: middle !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: none !important;
+}
+
+.btn-group .btn {
+    border-radius: 0 !important;
+    margin-left: -1px !important;
+    position: relative !important;
+    flex: 0 0 auto !important;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: var(--radius-sm) !important;
+    border-bottom-left-radius: var(--radius-sm) !important;
+    margin-left: 0 !important;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: var(--radius-sm) !important;
+    border-bottom-right-radius: var(--radius-sm) !important;
+}
+
+.btn-group .btn:hover,
+.btn-group .btn.active {
+    z-index: 1 !important;
+}
+
+/* Input in button groups */
+.btn-group .input {
+    border-radius: 0 !important;
+    margin-left: -1px !important;
+    height: 2.25rem !important;
+    border: 1px solid var(--color-border-primary) !important;
+    background-color: var(--color-bg-surface) !important;
+    color: var(--color-text-primary) !important;
+    font-size: var(--font-size-sm) !important;
+}
+
+.btn-group .input:first-child {
+    border-top-left-radius: var(--radius-sm) !important;
+    border-bottom-left-radius: var(--radius-sm) !important;
+    margin-left: 0 !important;
+}
+
+.btn-group .input:last-child {
+    border-top-right-radius: var(--radius-sm) !important;
+    border-bottom-right-radius: var(--radius-sm) !important;
+}
+
+.btn-group .input:focus {
+    z-index: 2 !important;
+    border-color: var(--color-border-focus) !important;
+    box-shadow: 0 0 0 2px rgba(64, 120, 242, 0.2) !important;
+}
+
+/* Button group dividers/labels */
+.btn-group div {
+    display: flex !important;
+    align-items: center !important;
+    height: 2.25rem !important;
+    padding: 0 0.75rem !important;
+    background-color: var(--color-bg-secondary) !important;
+    color: var(--color-text-secondary) !important;
+    border: 1px solid var(--color-border-primary) !important;
+    border-radius: 0 !important;
+    margin-left: -1px !important;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-medium) !important;
+    white-space: nowrap !important;
+}
+
+.btn-group div:first-child {
+    border-top-left-radius: var(--radius-sm) !important;
+    border-bottom-left-radius: var(--radius-sm) !important;
+    margin-left: 0 !important;
+}
+
+.btn-group div:last-child {
+    border-top-right-radius: var(--radius-sm) !important;
+    border-bottom-right-radius: var(--radius-sm) !important;
+}
+
+/* Transport Controls Specific */
+.transport-controls {
+    height: 3rem !important;
+    padding: 0.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background-color: var(--color-bg-surface) !important;
+    border-bottom: 1px solid var(--color-border-primary) !important;
+    gap: 1rem !important;
+}
+
+.transport-controls .btn-group {
+    height: 2.25rem !important;
+}
+
+.transport-controls .btn {
+    height: 2.25rem !important;
+    min-width: 2.25rem !important;
+    padding: 0 0.75rem !important;
+}
+
+/* Ensure consistent button heights across all transport controls */
+nav .btn,
+nav .input,
+nav .btn-group .btn,
+nav .btn-group .input,
+nav .btn-group div {
+    height: 2.25rem !important;
+    box-sizing: border-box !important;
+}
+
+/* Fix select dropdown in button groups */
+.btn-group select.input {
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 0.5rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 1rem !important;
+    padding-right: 2rem !important;
+    cursor: pointer !important;
+}
+
+/* Snap Button Specific Fixes */
+.btn-toggle {
+    border-width: 1px !important;
+    border-style: solid !important;
+    box-sizing: border-box !important;
+}
+
+.btn-toggle.active {
+    border-width: 1px !important;
+    border-style: solid !important;
+    box-sizing: border-box !important;
+    /* Remove any potential box-shadow that might affect size */
+    box-shadow: none !important;
+    /* Ensure no padding/margin changes */
+    padding: 0.375rem 0.75rem !important;
+    margin: 0 !important;
+    /* Prevent any transform that might affect alignment */
+    transform: none !important;
+}
+
+/* Prevent button size changes on active state */
+.btn-toggle:active,
+.btn-toggle.active:active {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Transport Button Consistency */
+nav .btn-group .btn {
+    min-width: 2.25rem !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    box-sizing: border-box !important;
+}
+
+/* Ensure snap button has same dimensions as other buttons */
+.btn-toggle {
+    min-width: 2.25rem !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+}
+
+/* Fix button alignment in transport bar */
+nav > div {
+    display: flex !important;
+    align-items: center !important;
+    height: 2.25rem !important;
+}
+
+/* Make sure all transport controls have consistent height */
+nav .btn-group,
+nav .btn,
+nav .input,
+nav select {
+    height: 2.25rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Additional Button Fixes for Transport */
+.btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px var(--color-border-focus) !important;
+}
+
+/* Ensure buttons don't grow beyond their content */
+.btn {
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+/* Fix button group layout issues */
+.btn-group {
+    align-items: stretch !important;
+}
+
+/* Ensure disabled buttons maintain consistent appearance */
+.btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background-color: var(--color-button-disabled) !important;
+    border-color: var(--color-border-primary) !important;
+}
+
+/* Override Bulma button styles that might interfere */
+.button {
+    height: 2.25rem !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: var(--font-size-sm) !important;
+    line-height: 1.5 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: all var(--transition-fast) !important;
+}
+
+.button:active {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.button:focus {
+    box-shadow: 0 0 0 2px var(--color-border-focus) !important;
+}
+
+/* Ensure inputs in button groups align properly */
+.btn-group input[type="number"] {
+    width: 4rem !important;
+    text-align: center !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+/* Fix select styling in button groups */
+.btn-group select {
+    min-width: 3rem !important;
+    cursor: pointer !important;
+}
+
+/* Navigation specific adjustments */
+nav {
+    min-height: 3rem !important;
+    height: 3rem !important;
+}
+
+nav .btn-group {
+    height: 2.25rem !important;
+}
+
+/* Ensure consistent font size for icons */
+.btn i {
+    font-size: 0.75rem !important;
+    width: 1rem !important;
+    height: 1rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Fix AppMenu alignment */
+.app-menu {
+    height: 2.25rem !important;
+}
+
+/* Ensure proper spacing between button groups */
+nav > div {
+    gap: 0.5rem !important;
+}
+
+/* Prevent text selection on buttons */
+.btn, .button {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* Effects Container Styles */
+.effects-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.effects-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.effects-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.effects-container::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.effects-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--border-active);
+}
+
+/* Drag and Drop Effect Styles */
+.effect-item {
+    transition: all 0.2s ease;
+}
+
+.effect-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.effect-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+/* Z-Index System for proper layering */
+:root {
+    /* Z-Index Scale */
+    --z-base: 1;
+    --z-timeline: 10;
+    --z-playhead: 50;
+    --z-sidebar: 100;
+    --z-dropdown: 1000;
+    --z-modal: 2000;
+    --z-dialog: 3000;
+    --z-notification: 4000;
+    --z-tooltip: 5000;
+}
+
+/* Timeline playhead should be below dialogs */
+.playhead {
+    z-index: var(--z-playhead) !important;
+}
+
+/* Dialog windows should be above playhead */
+.modal,
+.dialog,
+.effect-controls,
+.jmon-editor {
+    z-index: var(--z-dialog) !important;
+}
+
+/* Dropdown menus */
+.dropdown-menu,
+.app-menu {
+    z-index: var(--z-dropdown) !important;
+}
+
+/* Notifications should be on top */
+.notification-system {
+    z-index: var(--z-notification) !important;
+}

@@ -1,0 +1,372 @@
+/* JMON DAW - Bulma Coherent Theme System */
+
+/* ========================================
+   Ocean Sunset Theme (Default)
+   ======================================== */
+:root {
+  /* Bulma Core Variables - Ocean Sunset */
+  --bulma-scheme-main: #274754;
+  --bulma-scheme-main-bis: #1a3841; 
+  --bulma-scheme-main-ter: #3a5f6b;
+  --bulma-scheme-invert: #ffffff;
+  --bulma-scheme-invert-bis: #b8d4d8;
+  --bulma-scheme-invert-ter: #7a9ca3;
+  
+  /* Bulma Color Variables */
+  --bulma-primary: #f6b83c;
+  --bulma-primary-invert: #274754;
+  --bulma-info: #2a9d90;
+  --bulma-info-invert: #ffffff;
+  --bulma-success: #4ade80;
+  --bulma-warning: #f4a462;
+  --bulma-danger: #e76e50;
+  
+  /* Bulma Background & Surface */
+  --bulma-background: #274754;
+  --bulma-body-background-color: #274754;
+  --bulma-box-background-color: #3a5f6b;
+  --bulma-section-background-color: #274754;
+  
+  /* Bulma Text Colors */
+  --bulma-text: #ffffff;
+  --bulma-text-weak: #b8d4d8;
+  --bulma-text-strong: #ffffff;
+  
+  /* Bulma Border & Dividers */
+  --bulma-border: #3a5f6b;
+  --bulma-border-weak: #2a4f57;
+  --bulma-border-strong: #4a6f7b;
+  
+  /* JMON Custom Variables (aligned with Bulma) */
+  --surface-bg: var(--bulma-scheme-main-ter);
+  --elevated-bg: var(--bulma-box-background-color);
+  --primary-bg: var(--bulma-scheme-main);
+  --secondary-bg: var(--bulma-info);
+  --primary-accent: var(--bulma-primary);
+  --secondary-accent: var(--bulma-warning);
+  --danger-accent: var(--bulma-danger);
+  --text-primary: var(--bulma-text);
+  --text-secondary: var(--bulma-text-weak);
+  --text-muted: var(--bulma-scheme-invert-ter);
+  --border-color: var(--bulma-border);
+  --hover-overlay: rgba(42, 157, 144, 0.1);
+  --focus-ring: rgba(246, 184, 60, 0.3);
+  
+  /* Contrast System Variables */
+  --contrast-text: #ffffff;        /* Text for high contrast (dark themes) */
+  --contrast-text-inverse: #000000; /* Text for light backgrounds */
+  --contrast-border: #ffffff;      /* Borders for dark themes */
+  --contrast-border-inverse: #000000; /* Borders for light themes */
+  
+  /* Piano Roll & Notes Variables */
+  --note-bg: var(--bulma-warning);
+  --note-bg-hover: var(--bulma-danger);
+  --note-bg-selected: var(--bulma-primary);
+  --note-text: var(--contrast-text-inverse);
+  --note-border: var(--bulma-primary);
+  --note-border-selected: var(--contrast-text);
+  
+  /* Track & Piano Roll Variables */
+  --track-bg: var(--bulma-scheme-main-bis);
+  --track-bg-selected: var(--bulma-scheme-main-ter);
+  --track-bg-hover: rgba(42, 157, 144, 0.1);
+  --track-border: var(--bulma-border);        /* Bordures entre les tracks */
+  --track-border-selected: var(--bulma-primary); /* Bordure track sélectionné */
+  --piano-key-white: var(--bulma-scheme-main-ter);
+  --piano-key-black: var(--bulma-scheme-main-bis);
+  --piano-key-text: var(--contrast-text);
+}
+
+/* ========================================
+   Deep Blue Theme
+   ======================================== */
+[data-theme="dark-blue"] {
+  /* Bulma Core Variables - Deep Blue */
+  --bulma-scheme-main: #1e293b;
+  --bulma-scheme-main-bis: #0f172a;
+  --bulma-scheme-main-ter: #475569;
+  --bulma-scheme-invert: #f8fafc;
+  --bulma-scheme-invert-bis: #cbd5e1;
+  --bulma-scheme-invert-ter: #64748b;
+  
+  /* Bulma Color Variables */
+  --bulma-primary: #3b82f6;
+  --bulma-primary-invert: #f8fafc;
+  --bulma-info: #06b6d4;
+  --bulma-info-invert: #f8fafc;
+  --bulma-success: #10b981;
+  --bulma-warning: #f59e0b;
+  --bulma-danger: #ef4444;
+  
+  /* Bulma Background & Surface */
+  --bulma-background: #1e293b;
+  --bulma-body-background-color: #1e293b;
+  --bulma-box-background-color: #475569;
+  --bulma-section-background-color: #1e293b;
+  
+  /* Bulma Text Colors */
+  --bulma-text: #f8fafc;
+  --bulma-text-weak: #cbd5e1;
+  --bulma-text-strong: #f8fafc;
+  
+  /* Bulma Border & Dividers */
+  --bulma-border: #475569;
+  --bulma-border-weak: #334155;
+  --bulma-border-strong: #64748b;
+  
+  /* Contrast System Variables */
+  --contrast-text: #f8fafc;        /* Light text for dark theme */
+  --contrast-text-inverse: #1e293b; /* Dark text for light elements */
+  --contrast-border: #f8fafc;      /* Light borders for dark theme */
+  --contrast-border-inverse: #475569; /* Dark borders for light elements */
+  
+  /* Piano Roll & Notes Variables */
+  --note-bg: var(--bulma-warning);
+  --note-bg-hover: var(--bulma-danger);
+  --note-bg-selected: var(--bulma-primary);
+  --note-text: var(--contrast-text-inverse);
+  --note-border: var(--bulma-primary);
+  --note-border-selected: var(--contrast-text);
+  
+  /* Track & Piano Roll Variables */
+  --track-bg: var(--bulma-scheme-main-bis);
+  --track-bg-selected: var(--bulma-scheme-main-ter);
+  --track-bg-hover: rgba(59, 130, 246, 0.1);
+  --track-border: var(--bulma-border);        /* Bordures entre les tracks */
+  --track-border-selected: var(--bulma-primary); /* Bordure track sélectionné */
+  --piano-key-white: var(--bulma-scheme-main-ter);
+  --piano-key-black: var(--bulma-scheme-main-bis);
+  --piano-key-text: var(--contrast-text);
+}
+
+/* ========================================
+   Forest Theme
+   ======================================== */
+[data-theme="forest"] {
+  /* Bulma Core Variables - Forest */
+  --bulma-scheme-main: #1c2717;
+  --bulma-scheme-main-bis: #0f1a0a;
+  --bulma-scheme-main-ter: #3f6212;
+  --bulma-scheme-invert: #f7fee7;
+  --bulma-scheme-invert-bis: #d9f99d;
+  --bulma-scheme-invert-ter: #65a30d;
+  
+  /* Bulma Color Variables */
+  --bulma-primary: #84cc16;
+  --bulma-primary-invert: #1c2717;
+  --bulma-info: #22c55e;
+  --bulma-info-invert: #f7fee7;
+  --bulma-success: #10b981;
+  --bulma-warning: #f59e0b;
+  --bulma-danger: #dc2626;
+  
+  /* Bulma Background & Surface */
+  --bulma-background: #1c2717;
+  --bulma-body-background-color: #1c2717;
+  --bulma-box-background-color: #3f6212;
+  --bulma-section-background-color: #1c2717;
+  
+  /* Bulma Text Colors */
+  --bulma-text: #f7fee7;
+  --bulma-text-weak: #d9f99d;
+  --bulma-text-strong: #f7fee7;
+  
+  /* Bulma Border & Dividers */
+  --bulma-border: #3f6212;
+  --bulma-border-weak: #2d5016;
+  --bulma-border-strong: #4f7e1a;
+  
+  /* Contrast System Variables */
+  --contrast-text: #f7fee7;        /* Light text for dark theme */
+  --contrast-text-inverse: #1c2717; /* Dark text for light elements */
+  --contrast-border: #f7fee7;      /* Light borders for dark theme */
+  --contrast-border-inverse: #3f6212; /* Dark borders for light elements */
+  
+  /* Piano Roll & Notes Variables */
+  --note-bg: var(--bulma-warning);
+  --note-bg-hover: var(--bulma-danger);
+  --note-bg-selected: var(--bulma-primary);
+  --note-text: var(--contrast-text-inverse);
+  --note-border: var(--bulma-primary);
+  --note-border-selected: var(--contrast-text);
+  
+  /* Track & Piano Roll Variables */
+  --track-bg: var(--bulma-scheme-main-bis);
+  --track-bg-selected: var(--bulma-scheme-main-ter);
+  --track-bg-hover: rgba(132, 204, 22, 0.1);
+  --track-border: var(--bulma-border);        /* Bordures entre les tracks */
+  --track-border-selected: var(--bulma-primary); /* Bordure track sélectionné */
+  --piano-key-white: var(--bulma-scheme-main-ter);
+  --piano-key-black: var(--bulma-scheme-main-bis);
+  --piano-key-text: var(--contrast-text);
+}
+
+/* ========================================
+   Royal Purple Theme
+   ======================================== */
+[data-theme="purple"] {
+  /* Bulma Core Variables - Royal Purple */
+  --bulma-scheme-main: #2e1065;
+  --bulma-scheme-main-bis: #1e1b4b;
+  --bulma-scheme-main-ter: #7c3aed;
+  --bulma-scheme-invert: #faf5ff;
+  --bulma-scheme-invert-bis: #e9d5ff;
+  --bulma-scheme-invert-ter: #8b5cf6;
+  
+  /* Bulma Color Variables */
+  --bulma-primary: #a855f7;
+  --bulma-primary-invert: #faf5ff;
+  --bulma-info: #c084fc;
+  --bulma-info-invert: #faf5ff;
+  --bulma-success: #10b981;
+  --bulma-warning: #f59e0b;
+  --bulma-danger: #f87171;
+  
+  /* Bulma Background & Surface */
+  --bulma-background: #2e1065;
+  --bulma-body-background-color: #2e1065;
+  --bulma-box-background-color: #7c3aed;
+  --bulma-section-background-color: #2e1065;
+  
+  /* Bulma Text Colors */
+  --bulma-text: #faf5ff;
+  --bulma-text-weak: #e9d5ff;
+  --bulma-text-strong: #faf5ff;
+  
+  /* Bulma Border & Dividers */
+  --bulma-border: #7c3aed;
+  --bulma-border-weak: #5b21b6;
+  --bulma-border-strong: #8b5cf6;
+  
+  /* Contrast System Variables */
+  --contrast-text: #faf5ff;        /* Light text for dark theme */
+  --contrast-text-inverse: #2e1065; /* Dark text for light elements */
+  --contrast-border: #faf5ff;      /* Light borders for dark theme */
+  --contrast-border-inverse: #7c3aed; /* Dark borders for light elements */
+  
+  /* Piano Roll & Notes Variables */
+  --note-bg: var(--bulma-warning);
+  --note-bg-hover: var(--bulma-danger);
+  --note-bg-selected: var(--bulma-primary);
+  --note-text: var(--contrast-text-inverse);
+  --note-border: var(--bulma-primary);
+  --note-border-selected: var(--contrast-text);
+  
+  /* Track & Piano Roll Variables */
+  --track-bg: var(--bulma-scheme-main-bis);
+  --track-bg-selected: var(--bulma-scheme-main-ter);
+  --track-bg-hover: rgba(168, 85, 247, 0.1);
+  --track-border: var(--bulma-border);        /* Bordures entre les tracks */
+  --track-border-selected: var(--bulma-primary); /* Bordure track sélectionné */
+  --piano-key-white: var(--bulma-scheme-main-ter);
+  --piano-key-black: var(--bulma-scheme-main-bis);
+  --piano-key-text: var(--contrast-text);
+}
+
+/* ========================================
+   Global Bulma Overrides
+   ======================================== */
+
+/* Force body and html to use theme colors */
+html,
+body {
+  background-color: var(--bulma-body-background-color) !important;
+  color: var(--bulma-text) !important;
+}
+
+/* Override specific Bulma components */
+.box {
+  background-color: var(--bulma-box-background-color) !important;
+  color: var(--bulma-text) !important;
+}
+
+.section {
+  background-color: var(--bulma-section-background-color) !important;
+}
+
+.button.is-primary {
+  background-color: var(--bulma-primary) !important;
+  color: var(--bulma-primary-invert) !important;
+}
+
+.button.is-info {
+  background-color: var(--bulma-info) !important;
+  color: var(--bulma-info-invert) !important;
+}
+
+.button.is-dark {
+  background-color: var(--bulma-scheme-main-ter) !important;
+  color: var(--bulma-scheme-invert) !important;
+}
+
+.input,
+.textarea,
+.select select {
+  background-color: var(--bulma-scheme-main-bis) !important;
+  color: var(--bulma-text) !important;
+  border-color: var(--bulma-border) !important;
+}
+
+.tag.is-primary {
+  background-color: var(--bulma-primary) !important;
+  color: var(--bulma-primary-invert) !important;
+}
+
+.tag.is-dark {
+  background-color: var(--bulma-scheme-main-ter) !important;
+  color: var(--bulma-text) !important;
+}
+
+/* JMON DAW Specific Components */
+.daw-container {
+  background-color: var(--bulma-background) !important;
+  color: var(--bulma-text) !important;
+}
+
+/* Track and music elements */
+.track-lane {
+  background-color: var(--track-bg) !important;
+  border-bottom: 1px solid var(--track-border) !important;
+}
+
+.track-lane.is-selected {
+  background-color: var(--track-bg-selected) !important;
+  border-bottom: 2px solid var(--track-border-selected) !important;
+}
+
+.note {
+  background-color: var(--note-bg) !important;
+  color: var(--note-text) !important;
+  border-color: var(--note-border) !important;
+}
+
+.note:hover {
+  background-color: var(--note-bg-hover) !important;
+}
+
+.note.selected {
+  background-color: var(--note-bg-selected) !important;
+  border-color: var(--note-border-selected) !important;
+}
+
+/* Piano Roll */
+.piano-key-white {
+  background-color: var(--piano-key-white) !important;
+  color: var(--piano-key-text) !important;
+}
+
+.piano-key-black {
+  background-color: var(--piano-key-black) !important;
+  color: var(--piano-key-text) !important;
+}
+
+/* Playhead and timeline */
+.playhead-color { background-color: var(--bulma-danger) !important; }
+.timeline-grid { stroke: var(--bulma-border) !important; }
+.timeline-beat { stroke: var(--bulma-info) !important; }
+
+/* Text contrast utilities */
+.contrast-text { color: var(--contrast-text) !important; }
+.contrast-text-inverse { color: var(--contrast-text-inverse) !important; }
+.contrast-border { border-color: var(--contrast-border) !important; }
+.contrast-border-inverse { border-color: var(--contrast-border-inverse) !important; }

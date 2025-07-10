@@ -70,21 +70,21 @@ export default function Mixer() {
       <div class="is-flex-grow-1 is-overflow-auto p-4">
         <For each={store.tracks}>
           {(track) => (
-            <div class="box has-background-grey-darker p-4 mb-4" style="border: 1px solid #404040;">
+            <div class="box has-background-grey-darker p-4 mb-4" style="border: 1px solid var(--border-color);">
               {/* Track Header */}
               <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
                 <h4 class="has-text-weight-medium has-text-light is-size-6">{track.name}</h4>
                 <div class="buttons has-addons">
                   <button
                     class={`button is-small ${
-                      track.muted ? 'is-danger' : 'is-dark'
+                      track.muted ? 'is-danger' : 'is-ghost'
                     }`}
                   >
                     M
                   </button>
                   <button
                     class={`button is-small ${
-                      track.solo ? 'is-warning' : 'is-dark'
+                      track.solo ? 'is-warning' : 'is-ghost'
                     }`}
                   >
                     S
@@ -115,7 +115,7 @@ export default function Mixer() {
               {/* Synth Info */}
               <div class="field mb-4">
                 <label class="label is-small has-text-grey-light">Synthesizer</label>
-                <div class="tag is-dark is-fullwidth">
+                <div class="tag is-secondary is-fullwidth" style="background-color: var(--elevated-bg); color: var(--text-primary); border: 1px solid var(--border-color);">
                   {track.synthType}
                 </div>
               </div>
@@ -128,7 +128,8 @@ export default function Mixer() {
                     <div class="select is-small">
                       <select
                         onChange={(e) => addEffect(track.id, e.target.value)}
-                        class="has-background-primary has-text-white"
+                        class="has-background-secondary has-text-white"
+                        style="border: 1px solid var(--border-active); border-radius: var(--radius-sm);"
                         value=""
                       >
                         <option value="" disabled>+ Add Effect</option>

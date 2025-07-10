@@ -1,12 +1,161 @@
-import { For, createSignal, onMount, onCleanup } from 'solid-js';
+import { For, Show, createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 import { useDawStore } from '../stores/dawStore';
 import { getTrackPosition } from '../utils/trackLayout';
 import TrackLane from './TrackLane';
+
+// Loop Region Component for draggable/resizable loop bounds
+function LoopRegion(props) {
+  const [isDragging, setIsDragging] = createSignal(false);
+  const [isResizing, setIsResizing] = createSignal(null); // null, 'left', 'right'
+  const [dragStart, setDragStart] = createSignal({ x: 0, startTime: 0, endTime: 0 });
+  
+  const loopLeft = () => {
+    const left = props.loopStart * props.barWidth() - props.timelineScroll;
+    console.log(`🔄 Loop Left: start=${props.loopStart}, barWidth=${props.barWidth()}, scroll=${props.timelineScroll}, left=${left}px`);
+    return left;
+  };
+  
+  const loopWidth = () => {
+    const width = (props.loopEnd - props.loopStart) * props.barWidth();
+    console.log(`🔄 Loop Width: start=${props.loopStart}, end=${props.loopEnd}, barWidth=${props.barWidth()}, width=${width}px`);
+    return width;
+  };
+  
+  const handleMouseDown = (e, type = 'drag') => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (type === 'drag') {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX,
+        startTime: props.loopStart,
+        endTime: props.loopEnd
+      });
+    } else {
+      setIsResizing(type);
+      setDragStart({
+        x: e.clientX,
+        startTime: props.loopStart,
+        endTime: props.loopEnd
+      });
+    }
+    
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - dragStart().x;
+      const deltaTime = deltaX / props.barWidth();
+      
+      if (isDragging()) {
+        // Move entire loop region
+        const duration = dragStart().endTime - dragStart().startTime;
+        const newStart = Math.max(0, dragStart().startTime + deltaTime);
+        props.setLoopStart(newStart);
+        props.setLoopEnd(newStart + duration);
+      } else if (isResizing() === 'left') {
+        // Resize left edge
+        const newStart = Math.max(0, Math.min(dragStart().endTime - 0.25, dragStart().startTime + deltaTime));
+        props.setLoopStart(newStart);
+      } else if (isResizing() === 'right') {
+        // Resize right edge
+        const newEnd = Math.max(dragStart().startTime + 0.25, dragStart().endTime + deltaTime);
+        props.setLoopEnd(newEnd);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+  
+  console.log(`🔄 Rendering LoopRegion: start=${props.loopStart}, end=${props.loopEnd}, isLooping=true`);
+  
+  return (
+    <div
+      class="loop-region"
+      style={`
+        position: absolute;
+        left: ${loopLeft()}px;
+        top: 60%;
+        width: ${loopWidth()}px;
+        height: 35%;
+        background: rgba(255, 0, 0, 0.8);
+        border: 3px solid #ff0000;
+        border-radius: 4px;
+        cursor: move;
+        z-index: 50;
+        box-shadow: 0 2px 8px rgba(255, 221, 87, 0.3);
+        min-width: 20px;
+      `}
+      onMouseDown={(e) => handleMouseDown(e, 'drag')}
+    >
+      {/* Left resize handle */}
+      <div
+        style="
+          position: absolute;
+          left: -3px;
+          top: 0;
+          width: 6px;
+          height: 100%;
+          cursor: ew-resize;
+          background-color: var(--primary-accent);
+          border-radius: 2px 0 0 2px;
+        "
+        onMouseDown={(e) => handleMouseDown(e, 'left')}
+      />
+      
+      {/* Right resize handle */}
+      <div
+        style="
+          position: absolute;
+          right: -3px;
+          top: 0;
+          width: 6px;
+          height: 100%;
+          cursor: ew-resize;
+          background-color: var(--primary-accent);
+          border-radius: 0 2px 2px 0;
+        "
+        onMouseDown={(e) => handleMouseDown(e, 'right')}
+      />
+      
+      {/* Loop indicator text */}
+      <div
+        style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: #333;
+          font-size: 10px;
+          font-weight: 600;
+          pointer-events: none;
+          white-space: nowrap;
+        "
+      >
+        LOOP
+      </div>
+    </div>
+  );
+}
 
 export default function Timeline() {
   const store = useDawStore();
   const [timelineRef, setTimelineRef] = createSignal();
   const [rulerRef, setRulerRef] = createSignal();
+  
+  // Force reactivity tracking for loop state - test multiple approaches
+  createEffect(() => {
+    // Test all store properties to see which ones are reactive
+    console.log(`🔄 Timeline Effect: bpm=${store.bpm}, isPlaying=${store.isPlaying}, isLooping=${store.isLooping}`);
+    console.log(`🔄 Timeline Effect: loopStart=${store.loopStart}, loopEnd=${store.loopEnd}`);
+    console.log(`🔄 Timeline Effect: tracks.length=${store.tracks.length}`);
+  });
 
   // Timeline measurements - get time signature from JMON data
   const getTimeSignature = () => {
@@ -143,8 +292,8 @@ export default function Timeline() {
         class="timeline-ruler"
         style="
           height: 2.5rem; 
-          background-color: #2b2b2b; 
-          border-bottom: 1px solid #404040; 
+          background-color: var(--surface-bg); 
+          border-bottom: 1px solid var(--border-color); 
           position: relative; 
           overflow: hidden;
           user-select: none;
@@ -191,7 +340,7 @@ export default function Timeline() {
                   {/* Ruler Tick */}
                   <div 
                     style={`
-                      width: 1px;
+                      width: ${marker.type === 'bar' ? '2px' : marker.type === 'beat' ? '1.5px' : '1px'};
                       height: 100%;
                       background-color: ${getColor(marker.type)};
                       opacity: ${getOpacity(marker.type)};
@@ -234,6 +383,27 @@ export default function Timeline() {
             }}
           </For>
 
+          {/* Loop Region in Ruler - Debug Test */}
+          {(() => {
+            // Direct debug to see what's happening
+            console.log(`🔄 Timeline DEBUG: isLooping=${store.isLooping}, typeof=${typeof store.isLooping}`);
+            
+            // Try both approaches
+            if (store.isLooping) {
+              console.log(`🔄 Timeline: Should render loop region`);
+              return (
+                <div 
+                  style="position: absolute; left: 0px; top: 0; width: 200px; height: 20px; background: red; z-index: 100; border: 3px solid yellow;"
+                >
+                  TEST LOOP REGION
+                </div>
+              );
+            } else {
+              console.log(`🔄 Timeline: Not rendering loop region`);
+              return null;
+            }
+          })()}
+
           {/* Playhead in ruler */}
           <div
             style={`
@@ -242,8 +412,8 @@ export default function Timeline() {
               top: 0;
               width: 2px;
               height: 100%;
-              background-color: #ff3860;
-              z-index: 10;
+              background-color: var(--danger-accent);
+              z-index: 15;
               pointer-events: none;
             `}
           />
@@ -259,7 +429,7 @@ export default function Timeline() {
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 0.75rem;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-color);
             z-index: 15;
           "
         >
@@ -275,7 +445,7 @@ export default function Timeline() {
           flex: 1;
           position: relative;
           overflow: auto;
-          background-color: #1a1a1a;
+          background-color: var(--primary-bg);
         "
         onClick={handleTimelineClick}
         onWheel={handleWheel}
@@ -329,24 +499,6 @@ export default function Timeline() {
           )}
         </div>
 
-        {/* Loop Region */}
-        {store.isLooping && (
-          <div
-            class="loop-region"
-            style={`
-              position: absolute;
-              top: 0;
-              bottom: 0;
-              left: ${store.loopStart * barWidth() - store.timelineScroll}px;
-              width: ${(store.loopEnd - store.loopStart) * barWidth()}px;
-              background-color: rgba(255, 221, 87, 0.1);
-              border-left: 2px solid #ffdd57;
-              border-right: 2px solid #ffdd57;
-              z-index: 5;
-              pointer-events: none;
-            `}
-          />
-        )}
 
         {/* Playhead */}
         <div
@@ -357,7 +509,7 @@ export default function Timeline() {
             top: 0;
             bottom: 0;
             width: 2px;
-            background-color: #ff3860;
+            background-color: var(--danger-accent);
             z-index: 20;
             pointer-events: none;
             box-shadow: 0 0 4px rgba(255, 56, 96, 0.5);

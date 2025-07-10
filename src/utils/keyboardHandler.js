@@ -108,6 +108,24 @@ class KeyboardHandler {
         }
         break;
         
+      case 'KeyZ':
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.handleRedo();
+          } else {
+            this.handleUndo();
+          }
+        }
+        break;
+        
+      case 'KeyY':
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          this.handleRedo();
+        }
+        break;
+        
       case 'Digit1':
       case 'Digit2':
       case 'Digit3':
@@ -153,46 +171,22 @@ class KeyboardHandler {
   }
 
   async handlePlayPause() {
+    console.log(`⌨️ Keyboard handler: handlePlayPause called - isPlaying=${this.store.isPlaying}`);
     if (!this.store.isPlaying) {
-      try {
-        // Initialize audio engine if needed
-        if (!audioEngine.isInitialized) {
-          await audioEngine.init();
-          audioEngine.buildAudioGraph(this.store.jmonData);
-          audioEngine.setBpm(this.store.bpm);
-        }
-        
-        // Always clear and reschedule to ensure all notes play from current position
-        audioEngine.clear();
-        
-        // Set playback position
-        const bars = Math.floor(this.store.currentTime);
-        const beats = Math.floor((this.store.currentTime - bars) * 4);
-        const ticks = Math.floor(((this.store.currentTime - bars) * 4 - beats) * 480);
-        audioEngine.setPosition(`${bars}:${beats}:${ticks}`);
-        
-        // Re-schedule all sequences from current position
-        this.store.jmonData.sequences.forEach((sequence, index) => {
-          audioEngine.scheduleSequence(sequence, index);
-        });
-        
-        audioEngine.play();
-        this.store.setPlaying(true);
-      } catch (error) {
-        console.error('Keyboard play failed:', error);
-      }
+      // Use the store's play method which handles looping and playhead sync
+      console.log(`⌨️ Keyboard handler: Calling store.play()`);
+      await this.store.play();
     } else {
-      // Pause but don't clear sequences - just stop the transport
-      audioEngine.pause();
-      this.store.setPlaying(false);
+      // Use the store's pause method
+      console.log(`⌨️ Keyboard handler: Calling store.pause()`);
+      this.store.pause();
     }
   }
 
   handleStop() {
-    audioEngine.stop();
-    audioEngine.clear();
-    this.store.setPlaying(false);
-    this.store.setCurrentTime(0);
+    console.log(`⌨️ Keyboard handler: handleStop called`);
+    // Use the store's stop method for consistency
+    this.store.stop();
   }
 
   handleSeekBackward(largeStep = false) {
@@ -312,6 +306,16 @@ class KeyboardHandler {
     
     const beats = durationMap[duration] || 1;
     return beats / 4; // Convert beats to bars (4 beats = 1 bar)
+  }
+
+  handleUndo() {
+    console.log('⌨️ Keyboard handler: Undo triggered');
+    this.store.undo();
+  }
+
+  handleRedo() {
+    console.log('⌨️ Keyboard handler: Redo triggered');
+    this.store.redo();
   }
 }
 

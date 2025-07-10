@@ -256,7 +256,7 @@ export default function TrackEditor(props) {
         min-height: ${compactHeight}px;
         position: relative;
         border-bottom: 1px solid #404040;
-        background-color: ${store.selectedTrack === props.track.id ? '#2b2b2b' : '#1a1a1a'};
+        background-color: ${store.selectedTrack === props.track.id ? 'var(--track-bg-selected)' : 'var(--track-bg)'};
         cursor: crosshair;
         user-select: none;
         transition: height 0.2s ease;
@@ -317,7 +317,7 @@ export default function TrackEditor(props) {
                   height: ${noteHeight}px;
                   left: 0;
                   right: 0;
-                  background-color: ${key.isBlackKey ? '#2a2a2a' : '#353535'};
+                  background-color: ${key.isBlackKey ? 'var(--piano-key-black)' : 'var(--piano-key-white)'};
                   opacity: ${key.isBlackKey ? '0.6' : '0.3'};
                   border-bottom: 1px solid #404040;
                 `}
@@ -362,7 +362,7 @@ export default function TrackEditor(props) {
                   top: ${Math.max(0, y)}px;
                   width: ${width}px;
                   height: ${noteHeight}px;
-                  background: linear-gradient(135deg, #007aff 0%, #0056cc 100%);
+                  background: linear-gradient(135deg, var(--primary-accent) 0%, var(--secondary-accent) 100%);
                   border: 2px solid ${isSelected ? '#ffffff' : isHovered ? '#4a90e2' : '#007aff'};
                   border-radius: 3px;
                   color: white;
@@ -414,7 +414,7 @@ export default function TrackEditor(props) {
                   top: 2px;
                   width: ${Math.max(4, durationToWidth(note.duration))}px;
                   height: 8px;
-                  background-color: #007aff;
+                  background-color: var(--note-bg-selected);
                   border-radius: 1px;
                 `}
               />

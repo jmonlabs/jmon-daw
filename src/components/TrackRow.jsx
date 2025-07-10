@@ -1,63 +1,258 @@
-import { Show, For, createEffect } from 'solid-js';
-import { useDawStore } from '../stores/dawStore';
-import TrackLane from './TrackLane';
+import { Show, For, createEffect } from "solid-js";
+import { useDawStore } from "../stores/dawStore";
+import TrackLane from "./TrackLane";
+
+// Auto-zoom utility function
+const calculateOptimalZoom = (track) => {
+  const notes = track.notes || [];
+  if (notes.length === 0) {
+    return { verticalZoom: 1.0, verticalScroll: 0 };
+  }
+
+  // Convert note names to MIDI numbers
+  const noteNameToMidi = (noteName) => {
+    if (typeof noteName === "number") return noteName;
+
+    const noteNames = [
+      "C",
+      "C#",
+      "D",
+      "D#",
+      "E",
+      "F",
+      "F#",
+      "G",
+      "G#",
+      "A",
+      "A#",
+      "B",
+    ];
+
+    // Parse note name like "C2", "F#3", etc.
+    const match = noteName.match(/^([A-G]#?)([0-9])$/);
+    if (!match) return null;
+
+    const [, note, octaveStr] = match;
+    const noteIndex = noteNames.indexOf(note);
+    const octave = parseInt(octaveStr);
+
+    if (noteIndex === -1 || isNaN(octave)) return null;
+
+    // MIDI formula: C4 = 60, so MIDI = noteIndex + octave * 12 + 12
+    const midi = noteIndex + octave * 12 + 12;
+    return midi;
+  };
+
+  const midiNotes = notes
+    .map((note) => noteNameToMidi(note.note))
+    .filter((midi) => midi !== null);
+
+  if (midiNotes.length === 0) {
+    return { verticalZoom: 1.0, verticalScroll: 0 };
+  }
+
+  const minMidi = Math.min(...midiNotes);
+  const maxMidi = Math.max(...midiNotes);
+  const noteRange = maxMidi - minMidi;
+
+  // Calculate zoom level to fit all notes with some padding
+  const padding = Math.max(2, noteRange * 0.2); // 20% padding, min 2 semitones
+  const requiredSemitones = noteRange + padding;
+  const optimalZoom = Math.max(0.25, Math.min(4.0, 12 / requiredSemitones));
+
+  // Calculate vertical scroll to center the notes using fixed C4 reference
+  const trackHeight = track.height || 150; // Default track height
+  const centerMidi = (minMidi + maxMidi) / 2;
+
+  // Use fixed C4 (MIDI 60) as reference to match TrackLane logic
+  const referenceMidi = 60; // C4 - must match TrackLane.jsx
+  const referenceY = trackHeight / 2;
+  const spacing = (trackHeight - 40) / (12 / optimalZoom); // Grid spacing based on zoom
+
+  // Calculate where the center of the notes should be positioned
+  const noteOffset = centerMidi - referenceMidi;
+  const centerNoteY = referenceY - (noteOffset * spacing);
+
+  // Calculate needed scroll to center the notes in the visible area
+  const targetY = trackHeight / 2;
+  const neededScroll = centerNoteY - targetY;
+
+  console.log(
+    `🔍 Auto-zoom for "${track.name}": range=${minMidi}-${maxMidi} (${noteRange} semitones), zoom=${optimalZoom.toFixed(2)}, scroll=${neededScroll.toFixed(1)}`,
+  );
+
+  return {
+    verticalZoom: optimalZoom,
+    verticalScroll: neededScroll,
+  };
+};
 
 export default function TrackRow(props) {
   const store = useDawStore();
-  
-  const { track, index, beatWidth, barWidth, timelineScroll, gridMarkers } = props;
-  
+
+  const { track, index, beatWidth, barWidth, timelineScroll, gridMarkers } =
+    props;
+
   let trackLaneSectionRef;
 
   // Force synchronization of scroll when store.timelineScroll changes
   createEffect(() => {
     const currentScroll = store.timelineScroll;
-    if (trackLaneSectionRef && Math.abs(trackLaneSectionRef.scrollLeft - currentScroll) > 1) {
+    if (
+      trackLaneSectionRef &&
+      Math.abs(trackLaneSectionRef.scrollLeft - currentScroll) > 1
+    ) {
       trackLaneSectionRef.scrollLeft = currentScroll;
     }
   });
 
   return (
-    <div 
-      class="track-row"
+    <div
+      class={`track-row ${store.selectedTrack === track.id ? "selected" : ""}`}
       style={`
         display: flex;
         height: ${track.height || 80}px;
-        border-bottom: 1px solid #404040;
-        background-color: ${store.selectedTrack === track.id ? '#1a472a' : '#1a1a1a'};
         position: relative;
       `}
     >
-      {/* Track Info Section - Fixed Width */}
-      <div 
+      {/* Track Info Section - Redesigned with vertical title band */}
+      <div
         class="track-info-section"
         style="
           width: 200px;
-          background-color: #2b2b2b;
-          border-right: 1px solid #404040;
-          padding: 0.5rem;
           display: flex;
-          flex-direction: column;
-          justify-content: center;
           cursor: pointer;
+          background-color: var(--track-bg);
+          border-right: 2px solid var(--border-color);
+          position: relative;
         "
         onClick={() => store.setSelectedTrack(track.id)}
       >
-        {/* Track Name */}
-        <div style="color: #3db5dc; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          {track.name || `Track ${index + 1}`}
+        {/* Vertical Track Title Band */}
+        <div
+          style="
+          width: 24px;
+          background-color: var(--primary-accent);
+          border-right: 1px solid var(--border-active);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+        "
+        >
+          <div
+            style="
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            color: white;
+            font-weight: 600;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            letter-spacing: 0.05em;
+            transform: rotate(180deg);
+          "
+          >
+            {track.name || `Track ${index + 1}`}
+          </div>
         </div>
-        
-        {/* Controls Row */}
-        <div style="display: flex; justify-content: center; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem;">
-          <div class="buttons has-addons is-small">
+
+        {/* Controls Area */}
+        <div
+          style="
+          flex: 1;
+          padding: 0.5rem;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          position: relative;
+        "
+        >
+          {/* Scroll Up Button - Top Right */}
+          <Show when={track.height > 120}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentScroll = track.verticalScroll || 0;
+                const scrollStep = 12 * (track.verticalZoom || 2.5); // Scroll by one octave
+                // Remove the Math.max(0, ...) limitation to allow negative scroll for high notes
+                const newScroll = currentScroll - scrollStep;
+                store.updateTrack(track.id, { verticalScroll: newScroll });
+              }}
+              style="
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                width: 1.5rem;
+                height: 1.5rem;
+                border-radius: var(--radius-sm);
+                background-color: var(--button-bg);
+                border: 1px solid var(--border-color);
+                color: var(--text-primary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                z-index: 10;
+              "
+              title="Scroll Up (Piano Roll)"
+            >
+              <i class="fa-solid fa-chevron-up"></i>
+            </button>
+          </Show>
+
+          {/* Scroll Down Button - Bottom Right */}
+          <Show when={track.height > 120}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentScroll = track.verticalScroll || 0;
+                const scrollStep = 12 * (track.verticalZoom || 2.5); // Scroll by one octave
+                // Allow unlimited scroll down for low notes
+                const newScroll = currentScroll + scrollStep;
+                store.updateTrack(track.id, { verticalScroll: newScroll });
+              }}
+              style="
+                position: absolute;
+                bottom: 0.5rem;
+                right: 0.5rem;
+                width: 1.5rem;
+                height: 1.5rem;
+                border-radius: var(--radius-sm);
+                background-color: var(--button-bg);
+                border: 1px solid var(--border-color);
+                color: var(--text-primary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                z-index: 10;
+              "
+              title="Scroll Down (Piano Roll)"
+            >
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+          </Show>
+
+          {/* M, S, X Buttons - Grouped with button-group styling */}
+          <div class="btn-group" style="margin-bottom: 0.5rem;">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 store.updateTrack(track.id, { muted: !track.muted });
               }}
-              class={`button is-small ${track.muted ? 'is-danger' : 'is-dark'}`}
-              style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              style={`
+                background-color: ${track.muted ? 'var(--primary-accent)' : 'var(--color-bg-secondary)'};
+                color: ${track.muted ? 'white' : 'var(--text-primary)'};
+                border: 1px solid var(--color-border-primary);
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+                border-radius: 4px 0 0 4px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              `}
               title={track.muted ? "Désactiver le mute" : "Activer le mute"}
             >
               M
@@ -67,8 +262,18 @@ export default function TrackRow(props) {
                 e.stopPropagation();
                 store.updateTrack(track.id, { solo: !track.solo });
               }}
-              class={`button is-small ${track.solo ? 'is-warning' : 'is-dark'}`}
-              style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              style={`
+                background-color: ${track.solo ? 'var(--primary-accent)' : 'var(--color-bg-secondary)'};
+                color: ${track.solo ? 'white' : 'var(--text-primary)'};
+                border: 1px solid var(--color-border-primary);
+                border-left: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+                border-radius: 0;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              `}
               title={track.solo ? "Désactiver le solo" : "Activer le solo"}
             >
               S
@@ -76,141 +281,112 @@ export default function TrackRow(props) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Êtes-vous sûr de vouloir supprimer la track "${track.name || `Track ${index + 1}`}" ?`)) {
+                if (
+                  confirm(
+                    `Êtes-vous sûr de vouloir supprimer la track "${track.name || `Track ${index + 1}`}" ?`,
+                  )
+                ) {
                   store.removeTrack(track.id);
                 }
               }}
-              class="button is-small is-dark"
-              style="padding: 0 0.3rem; font-size: 0.6rem; height: 1.4rem; min-width: 1.6rem;"
+              style="
+                background-color: var(--color-bg-secondary);
+                color: var(--text-primary);
+                border: 1px solid var(--color-border-primary);
+                border-left: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+                border-radius: 0 4px 4px 0;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              "
               title="Supprimer la track"
             >
-              ×
+              <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
             </button>
           </div>
-        </div>
-        
-        {/* Vertical Zoom and Scroll Controls */}
-        <Show when={track.height > 120}>
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.25rem; margin-bottom: 0.25rem;">
-            {/* Vertical Zoom */}
-            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-              <div class="has-text-grey-light is-size-7 mb-1">V-Zoom</div>
-              <div class="buttons has-addons is-small">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newZoom = Math.max(0.5, (track.verticalZoom || 2.5) - 0.25);
-                    store.updateTrack(track.id, { verticalZoom: newZoom });
-                  }}
-                  class="button is-small is-dark"
-                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
-                >
-                  -
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log(`🎯 Auto-zoom triggered for track ${track.name}`);
-                    
-                    // Calculate optimal zoom to show all notes
-                    const notes = track.notes || [];
-                    if (notes.length === 0) {
-                      store.updateTrack(track.id, { verticalZoom: 1.0, verticalScroll: 0 });
-                      return;
-                    }
-                    
-                    // Get MIDI range of all notes
-                    const midiNotes = notes.map(note => 
-                      typeof note.note === 'string' ? 
-                        // Convert note name to MIDI (simple conversion)
-                        (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].indexOf(note.note.slice(0, -1)) + (parseInt(note.note.slice(-1)) + 1) * 12) :
-                        note.note
-                    ).filter(midi => !isNaN(midi));
-                    
-                    if (midiNotes.length === 0) {
-                      store.updateTrack(track.id, { verticalZoom: 1.0, verticalScroll: 0 });
-                      return;
-                    }
-                    
-                    const minMidi = Math.min(...midiNotes);
-                    const maxMidi = Math.max(...midiNotes);
-                    const noteRange = maxMidi - minMidi;
-                    
-                    // Calculate zoom level to fit all notes with some padding
-                    // Using our zoom formula: visibleSemitones = 12 / zoom
-                    // We want: visibleSemitones >= noteRange + padding
-                    const padding = Math.max(2, noteRange * 0.2); // 20% padding, min 2 semitones
-                    const requiredSemitones = noteRange + padding;
-                    const optimalZoom = Math.max(0.25, Math.min(4.0, 12 / requiredSemitones));
-                    
-                    console.log(`📊 Auto-zoom calculation: range=${minMidi}-${maxMidi} (${noteRange} semitones), requiredSemitones=${requiredSemitones.toFixed(1)}, optimalZoom=${optimalZoom.toFixed(2)}`);
-                    
-                    store.updateTrack(track.id, { verticalZoom: optimalZoom, verticalScroll: 0 });
-                  }}
-                  class="button is-small is-info"
-                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
-                  title="Auto-zoom to fit notes"
-                >
-                  A
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newZoom = Math.min(5, (track.verticalZoom || 2.5) + 0.25);
-                    store.updateTrack(track.id, { verticalZoom: newZoom });
-                  }}
-                  class="button is-small is-dark"
-                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
-                >
-                  +
-                </button>
-              </div>
+
+          {/* V-Zoom Section - Grouped buttons */}
+          <Show when={track.height > 120}>
+            <div class="btn-group" style="margin-bottom: 0.75rem;">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newZoom = Math.max(
+                    0.5,
+                    (track.verticalZoom || 2.5) - 0.25,
+                  );
+                  store.updateTrack(track.id, { verticalZoom: newZoom });
+                }}
+                class="btn btn-secondary btn-sm"
+                title="Zoom Out Vertical"
+              >
+                <i
+                  class="fa-solid fa-magnifying-glass-minus"
+                  style="font-size: 0.7rem;"
+                ></i>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log(
+                    `🎯 Manual auto-zoom triggered for track ${track.name}`,
+                  );
+
+                  const zoomSettings = calculateOptimalZoom(track);
+                  store.updateTrack(track.id, zoomSettings);
+                }}
+                class="btn btn-primary btn-sm"
+                title="Auto-zoom to fit notes"
+              >
+                <span style="font-weight: var(--font-weight-semibold);">A</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newZoom = Math.min(
+                    5,
+                    (track.verticalZoom || 2.5) + 0.25,
+                  );
+                  store.updateTrack(track.id, { verticalZoom: newZoom });
+                }}
+                class="btn btn-secondary btn-sm"
+                title="Zoom In Vertical"
+              >
+                <i
+                  class="fa-solid fa-magnifying-glass-plus"
+                  style="font-size: 0.7rem;"
+                ></i>
+              </button>
             </div>
-            
-            {/* Vertical Scroll */}
-            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-              <div class="has-text-grey-light is-size-7 mb-1">V-Scroll</div>
-              <div class="buttons has-addons is-small">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newScroll = Math.max(-200, (track.verticalScroll || 0) - 20);
-                    store.updateTrack(track.id, { verticalScroll: newScroll });
-                  }}
-                  class="button is-small is-dark"
-                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
-                >
-                  ↑
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newScroll = Math.min(200, (track.verticalScroll || 0) + 20);
-                    store.updateTrack(track.id, { verticalScroll: newScroll });
-                  }}
-                  class="button is-small is-dark"
-                  style="padding: 0 0.25rem; font-size: 0.6rem; height: 1.2rem; min-width: 1.2rem;"
-                >
-                  ↓
-                </button>
-              </div>
+          </Show>
+
+          {/* Note Count - Style discret - Hide when track is small */}
+          <Show when={track.height > 120}>
+            <div
+              style="
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            margin-top: auto;
+            margin-bottom: 0.25rem;
+          "
+            >
+              Notes: {track.notes?.length || 0}
             </div>
-          </div>
-        </Show>
-        
-        {/* Note Count */}
-        <div class="has-text-grey-light is-size-7">
-          Notes: {track.notes?.length || 0}
+          </Show>
+
+          {/* Flèche de pliage/dépliage removed - replaced by scroll buttons in track lane */}
         </div>
       </div>
 
       {/* Track Lane Section - Individual scroll synchronized with global store */}
-      <div 
+      <div
         class="track-lane-section"
         style="
           flex: 1;
           position: relative;
-          background-color: #1a1a1a;
+          background-color: var(--surface-bg);
           overflow-x: auto;
           overflow-y: hidden;
           z-index: 1;
@@ -226,10 +402,10 @@ export default function TrackRow(props) {
           trackLaneSectionRef = ref;
         }}
       >
-        <TrackLane 
-          track={track} 
-          index={index} 
-          beatWidth={beatWidth} 
+        <TrackLane
+          track={track}
+          index={index}
+          beatWidth={beatWidth}
           barWidth={barWidth}
           timelineScroll={timelineScroll}
           gridMarkers={gridMarkers}
@@ -255,288 +431,464 @@ export default function TrackRow(props) {
         onMouseDown={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          
+
           const startY = e.clientY;
           const startHeight = track.height || 80;
-          
+
           const handleMouseMove = (moveEvent) => {
             const deltaY = moveEvent.clientY - startY;
             const newHeight = Math.max(80, startHeight + deltaY);
             store.updateTrack(track.id, { height: newHeight });
           };
-          
+
           const handleMouseUp = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
           };
-          
-          document.addEventListener('mousemove', handleMouseMove);
-          document.addEventListener('mouseup', handleMouseUp);
+
+          document.addEventListener("mousemove", handleMouseMove);
+          document.addEventListener("mouseup", handleMouseUp);
         }}
         onMouseEnter={(e) => {
-          e.target.style.backgroundColor = 'rgba(0, 122, 255, 0.3)';
+          e.target.style.backgroundColor = "rgba(0, 122, 255, 0.3)";
         }}
         onMouseLeave={(e) => {
-          e.target.style.backgroundColor = 'transparent';
+          e.target.style.backgroundColor = "transparent";
         }}
       />
 
       {/* Effects Section - Fixed Width (when visible) */}
       <Show when={store.rightSidebarOpen}>
-        <div 
+        <div
           class="track-effects-section"
           style="
             width: 250px;
-            background-color: #2b2b2b;
-            border-left: 1px solid #404040;
             padding: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            border-left: 2px solid var(--border-color);
+            background-color: var(--surface-bg);
           "
         >
           {/* Volume Knob */}
           <div style="display: flex; flex-direction: column; align-items: center; width: 2.5rem;">
-            <div class="has-text-grey-light is-size-7 mb-1">VOL</div>
-            <div style="position: relative; width: 24px; height: 24px;">
-              <div style="
-                width: 24px; 
-                height: 24px; 
-                border-radius: 50%; 
-                background: #404040;
-                border: 2px solid #666;
+            <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; margin-bottom: 0.25rem;">
+              VOL
+            </div>
+            <div style="position: relative; width: 28px; height: 28px;">
+              <div
+                style="
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: var(--button-bg);
+                border: 2px solid var(--border-color);
                 position: relative;
                 cursor: pointer;
               "
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const startY = e.clientY;
-                const startValue = track.volume || 0.8;
-                
-                const handleMouseMove = (moveEvent) => {
-                  const deltaY = startY - moveEvent.clientY;
-                  const sensitivity = 0.005;
-                  const newValue = Math.max(0, Math.min(1, startValue + (deltaY * sensitivity)));
-                  store.updateTrack(track.id, { volume: newValue });
-                };
-                
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                };
-                
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-              }}>
-                <div style={`
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const startY = e.clientY;
+                  const startValue = track.volume || 0.8;
+
+                  const handleMouseMove = (moveEvent) => {
+                    const deltaY = startY - moveEvent.clientY;
+                    const sensitivity = 0.005;
+                    const newValue = Math.max(
+                      0,
+                      Math.min(1, startValue + deltaY * sensitivity),
+                    );
+                    store.updateTrack(track.id, { volume: newValue });
+                  };
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener("mousemove", handleMouseMove);
+                    document.removeEventListener("mouseup", handleMouseUp);
+                  };
+
+                  document.addEventListener("mousemove", handleMouseMove);
+                  document.addEventListener("mouseup", handleMouseUp);
+                }}
+              >
+                {/* Tick marks */}
+                <div
+                  style="
                   position: absolute;
                   top: 2px;
                   left: 50%;
-                  width: 2px;
-                  height: 8px;
-                  background: #00d1b2;
-                  border-radius: 1px;
-                  transform-origin: 50% 10px;
+                  width: 1px;
+                  height: 4px;
+                  background: var(--text-muted);
+                  transform: translateX(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  bottom: 2px;
+                  left: 50%;
+                  width: 1px;
+                  height: 4px;
+                  background: var(--text-muted);
+                  transform: translateX(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  left: 2px;
+                  top: 50%;
+                  width: 4px;
+                  height: 1px;
+                  background: var(--text-muted);
+                  transform: translateY(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  right: 2px;
+                  top: 50%;
+                  width: 4px;
+                  height: 1px;
+                  background: var(--text-muted);
+                  transform: translateY(-50%);
+                "
+                ></div>
+
+                {/* Pointer */}
+                <div
+                  style={`
+                  position: absolute;
+                  top: 3px;
+                  left: 50%;
+                  width: 3px;
+                  height: 10px;
+                  background: var(--primary-accent);
+                  border-radius: 1.5px;
+                  transform-origin: 50% 11px;
                   transform: translateX(-50%) rotate(${(track.volume || 0.8) * 270 - 135}deg);
-                `} />
+                `}
+                />
               </div>
             </div>
-            <div class="has-text-grey-light is-size-7 mt-1" style="font-size: 0.5rem;">
+            <div style="color: var(--text-muted); font-size: 0.6rem; font-weight: 600; margin-top: 0.25rem;">
               {Math.round((track.volume || 0.8) * 100)}
             </div>
           </div>
-          
+
           {/* Pan Knob */}
           <div style="display: flex; flex-direction: column; align-items: center; width: 2.5rem;">
-            <div class="has-text-grey-light is-size-7 mb-1">PAN</div>
-            <div style="position: relative; width: 24px; height: 24px;">
-              <div style="
-                width: 24px; 
-                height: 24px; 
-                border-radius: 50%; 
-                background: #404040;
-                border: 2px solid #666;
+            <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; margin-bottom: 0.25rem;">
+              PAN
+            </div>
+            <div style="position: relative; width: 28px; height: 28px;">
+              <div
+                style="
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: var(--button-bg);
+                border: 2px solid var(--border-color);
                 position: relative;
                 cursor: pointer;
               "
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const startY = e.clientY;
-                const startValue = track.pan || 0;
-                
-                const handleMouseMove = (moveEvent) => {
-                  const deltaY = startY - moveEvent.clientY;
-                  const sensitivity = 0.005;
-                  const newValue = Math.max(-1, Math.min(1, startValue + (deltaY * sensitivity)));
-                  store.updateTrack(track.id, { pan: newValue });
-                };
-                
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                };
-                
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-              }}>
-                <div style={`
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const startY = e.clientY;
+                  const startValue = track.pan || 0;
+
+                  const handleMouseMove = (moveEvent) => {
+                    const deltaY = startY - moveEvent.clientY;
+                    const sensitivity = 0.005;
+                    const newValue = Math.max(
+                      -1,
+                      Math.min(1, startValue + deltaY * sensitivity),
+                    );
+                    store.updateTrack(track.id, { pan: newValue });
+                  };
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener("mousemove", handleMouseMove);
+                    document.removeEventListener("mouseup", handleMouseUp);
+                  };
+
+                  document.addEventListener("mousemove", handleMouseMove);
+                  document.addEventListener("mouseup", handleMouseUp);
+                }}
+              >
+                {/* Tick marks */}
+                <div
+                  style="
                   position: absolute;
                   top: 2px;
                   left: 50%;
-                  width: 2px;
-                  height: 8px;
-                  background: #ffdd57;
-                  border-radius: 1px;
-                  transform-origin: 50% 10px;
+                  width: 1px;
+                  height: 4px;
+                  background: var(--text-muted);
+                  transform: translateX(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  bottom: 2px;
+                  left: 50%;
+                  width: 1px;
+                  height: 4px;
+                  background: var(--text-muted);
+                  transform: translateX(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  left: 2px;
+                  top: 50%;
+                  width: 4px;
+                  height: 1px;
+                  background: var(--text-muted);
+                  transform: translateY(-50%);
+                "
+                ></div>
+                <div
+                  style="
+                  position: absolute;
+                  right: 2px;
+                  top: 50%;
+                  width: 4px;
+                  height: 1px;
+                  background: var(--text-muted);
+                  transform: translateY(-50%);
+                "
+                ></div>
+
+                {/* Pointer */}
+                <div
+                  style={`
+                  position: absolute;
+                  top: 3px;
+                  left: 50%;
+                  width: 3px;
+                  height: 10px;
+                  background: var(--secondary-accent);
+                  border-radius: 1.5px;
+                  transform-origin: 50% 11px;
                   transform: translateX(-50%) rotate(${(track.pan || 0) * 135}deg);
-                `} />
+                `}
+                />
               </div>
             </div>
-            <div class="has-text-grey-light is-size-7 mt-1" style="font-size: 0.5rem;">
-              {Math.abs(track.pan || 0) < 0.1 ? 'C' : (track.pan || 0) > 0 ? 'R' : 'L'}
+            <div style="color: var(--text-muted); font-size: 0.6rem; font-weight: 600; margin-top: 0.25rem;">
+              {Math.abs(track.pan || 0) < 0.1
+                ? "C"
+                : (track.pan || 0) > 0
+                  ? "R"
+                  : "L"}
             </div>
           </div>
-          
-          {/* Audio Chain - Vertical Boxes like mockup with scroll */}
-          <div 
+
+          {/* Audio Chain - Horizontal stacking exactly like mockup */}
+          <div
             class="effects-chain-scroll"
             style="
-              flex: 1; 
-              display: flex; 
-              align-items: center; 
-              gap: 0.375rem; 
-              overflow-x: auto; 
+              flex: 1;
+              display: flex;
+              align-items: center;
+              gap: 0;
+              overflow-x: auto;
               overflow-y: hidden;
-              padding: 0.25rem;
+              padding: 0.25rem 0.125rem;
               scrollbar-width: thin;
-              scrollbar-color: #666 #2b2b2b;
+              scrollbar-color: var(--text-muted) var(--surface-bg);
             "
           >
-            
-            {/* Synth/Source - Tall vertical box with rotated text */}
-            <div style="
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
+            {/* Synth/Source - First element */}
+            <div
+              style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
               justify-content: center;
-              width: 28px; 
-              height: 60px; 
-              background-color: #00d1b2; 
-              border-radius: 6px; 
-              color: white; 
-              font-size: 0.6rem; 
+              width: 22px;
+              height: 60px;
+              background-color: var(--ternary-accent);
+              border: 1px solid var(--border-color);
+              border-radius: 6px 0 0 6px;
+              color: var(--text);
+              font-size: 0.6rem;
               font-weight: 600;
               text-align: center;
               line-height: 1.1;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
               flex-shrink: 0;
               cursor: pointer;
+              position: relative;
+              z-index: 1;
             "
-            onClick={(e) => {
-              e.stopPropagation();
-              store.setSelectedEffect({ 
-                trackId: track.id, 
-                type: 'synth', 
-                name: track.synthType || 'Synth',
-                options: track.synthOptions || {}
-              });
-            }}
+              onClick={(e) => {
+                e.stopPropagation();
+                store.setSelectedEffect({
+                  trackId: track.id,
+                  type: "synth",
+                  name: track.synthType || "Synth",
+                  options: track.synthOptions || {},
+                });
+              }}
             >
-              <span style="
-                transform: rotate(-90deg); 
+              <span
+                style="
+                transform: rotate(-90deg);
                 white-space: nowrap;
                 transform-origin: center;
-              ">
-                {(track.synthType || 'Synth').substring(0, 8)}
+              "
+              >
+                {(track.synthType || "Synth").substring(0, 8)}
               </span>
             </div>
-            
-            {/* Effects Chain - Vertical boxes with rotated text */}
+
+            {/* Effects Chain - Connected to synth */}
             <For each={track.effects || []}>
               {(effect, index) => (
-                <div style="
-                  display: flex; 
-                  flex-direction: column; 
-                  align-items: center; 
-                  justify-content: center;
-                  width: 28px; 
-                  height: 60px; 
-                  background-color: #3273dc; 
-                  border-radius: 6px; 
-                  color: white; 
-                  font-size: 0.6rem; 
-                  font-weight: 600;
-                  text-align: center;
-                  line-height: 1.1;
-                  position: relative;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                  cursor: pointer;
-                  flex-shrink: 0;
-                "
-                onClick={(e) => {
-                  e.stopPropagation();
-                  store.setSelectedEffect({ 
-                    trackId: track.id, 
-                    type: 'effect', 
-                    effectIndex: index(),
-                    name: effect.type || 'Effect',
-                    options: effect.options || {}
-                  });
-                }}
+                <div
+                  draggable="true"
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", JSON.stringify({
+                      trackId: track.id,
+                      effectIndex: index(),
+                      effect: effect
+                    }));
+                    e.dataTransfer.effectAllowed = "move";
+                    e.target.style.opacity = "0.5";
+                  }}
+                  onDragEnd={(e) => {
+                    e.target.style.opacity = "1";
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    try {
+                      const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
+                      const dropIndex = index();
+                      const dragIndex = dragData.effectIndex;
+                      
+                      if (dragData.trackId === track.id && dragIndex !== dropIndex) {
+                        // Reorder effects within the same track
+                        const effects = [...track.effects];
+                        const [draggedEffect] = effects.splice(dragIndex, 1);
+                        effects.splice(dropIndex, 0, draggedEffect);
+                        store.updateTrack(track.id, { effects });
+                      }
+                    } catch (error) {
+                      console.error("Error handling drop:", error);
+                    }
+                  }}
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    width: 22px;
+                    height: 60px;
+                    background-color: var(--info-color);
+                    border: 1px solid var(--border-color);
+                    border-left: none;
+                    border-radius: 0;
+                    color: white;
+                    font-size: 0.6rem;
+                    font-weight: 600;
+                    text-align: center;
+                    line-height: 1.1;
+                    position: relative;
+                    cursor: move;
+                    flex-shrink: 0;
+                    transition: all 0.2s ease;
+                    z-index: 1;
+                  "
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store.setSelectedEffect({
+                      trackId: track.id,
+                      type: "effect",
+                      effectIndex: index(),
+                      name: effect.type || "Effect",
+                      options: effect.options || {},
+                    });
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "var(--info-hover)";
+                    e.target.style.transform = "scale(1.05)";
+                    e.target.style.zIndex = "10";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "var(--info-color)";
+                    e.target.style.transform = "scale(1)";
+                    e.target.style.zIndex = "1";
+                  }}
                 >
-                  <span style="
-                    transform: rotate(-90deg); 
-                    white-space: nowrap;
-                    transform-origin: center;
-                  ">
-                    {(effect.type || 'Effect').substring(0, 8)}
-                  </span>
-                  <button
-                    style="position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: #ef4444; color: white; border: none; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"
-                    title="Remove Effect"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const updatedEffects = track.effects.filter((_, i) => i !== index());
-                      store.updateTrack(track.id, { effects: updatedEffects });
-                    }}
+                  <span
+                    style="
+                      transform: rotate(-90deg);
+                      white-space: nowrap;
+                      transform-origin: center;
+                      pointer-events: none;
+                    "
                   >
-                    ×
-                  </button>
+                    {(effect.type || "Effect").substring(0, 8)}
+                  </span>
                 </div>
               )}
             </For>
-            
-            {/* Add Effect Button - Fixed round plus */}
+
+            {/* Add Effect Button - Thin and connected */}
             <button
               style="
-                min-width: 30px; 
-                width: 30px;
-                min-height: 30px;
-                height: 30px; 
-                border-radius: 15px; 
-                background-color: #666; 
-                color: white; 
-                border: none; 
-                font-size: 16px; 
+                width: 16px;
+                height: 60px;
+                background-color: var(--button-bg);
+                color: var(--text-primary);
+                border: 1px solid var(--border-color);
+                border-left: none;
+                border-radius: 0;
+                font-size: 14px;
                 font-weight: bold;
                 line-height: 1;
-                display: flex; 
-                align-items: center; 
+                display: flex;
+                align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                transition: background-color 0.2s;
+                transition: all var(--transition-fast);
                 flex-shrink: 0;
                 padding: 0;
                 margin: 0;
+                z-index: 1;
               "
               title="Add Effect"
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#888'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#666'}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "var(--button-hover)";
+                e.target.style.transform = "scale(1.05)";
+                e.target.style.zIndex = "10";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "var(--button-bg)";
+                e.target.style.transform = "scale(1)";
+                e.target.style.zIndex = "1";
+              }}
               onClick={(e) => {
                 e.stopPropagation();
-                const effectTypes = ['Reverb', 'Delay', 'Chorus', 'Distortion', 'Filter', 'Compressor'];
-                const randomType = effectTypes[Math.floor(Math.random() * effectTypes.length)];
+                const effectTypes = [
+                  "Reverb",
+                  "Delay",
+                  "Chorus",
+                  "Distortion",
+                  "Filter",
+                  "Compressor",
+                ];
+                const randomType =
+                  effectTypes[Math.floor(Math.random() * effectTypes.length)];
                 const newEffect = { type: randomType, options: {} };
                 const updatedEffects = [...(track.effects || []), newEffect];
                 store.updateTrack(track.id, { effects: updatedEffects });
@@ -544,36 +896,41 @@ export default function TrackRow(props) {
             >
               <span style="transform: translateY(-1px);">+</span>
             </button>
-            
-            {/* Master - Tall vertical box with rotated text */}
-            <div style="
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
+
+            {/* Master - Connected to the chain */}
+            <div
+              style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
               justify-content: center;
-              width: 28px; 
-              height: 60px; 
-              background-color: #23d160; 
-              border-radius: 6px; 
-              color: white; 
-              font-size: 0.6rem; 
+              width: 22px;
+              height: 60px;
+              background-color: var(--ternary-accent);
+              border: 1px solid var(--border-color);
+              border-left: none;
+              border-radius: 0 6px 6px 0;
+              color: var(--text);
+              font-size: 0.6rem;
               font-weight: 600;
               text-align: center;
               line-height: 1.1;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
               flex-shrink: 0;
               cursor: pointer;
+              z-index: 1;
             "
-            onClick={(e) => {
-              e.stopPropagation();
-              store.toggleMasterBus();
-            }}
+              onClick={(e) => {
+                e.stopPropagation();
+                store.toggleMasterBus();
+              }}
             >
-              <span style="
-                transform: rotate(-90deg); 
+              <span
+                style="
+                transform: rotate(-90deg);
                 white-space: nowrap;
                 transform-origin: center;
-              ">
+              "
+              >
                 Master
               </span>
             </div>

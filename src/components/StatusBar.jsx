@@ -12,7 +12,7 @@ export default function StatusBar() {
   };
 
   return (
-    <div class="is-flex is-justify-content-space-between is-align-items-center px-4 has-text-grey-light is-size-7" style="height: 1.5rem; border-top: 1px solid #404040; background-color: #2b2b2b;">
+    <div class="is-flex is-justify-content-space-between is-align-items-center px-4 has-text-grey-light is-size-7" style="height: 1.5rem; border-top: 1px solid var(--border-color); background-color: var(--surface-bg);">
       <div class="is-flex is-align-items-center">
         <span class="mr-4">Tracks: {store.tracks.length}</span>
         <span class="mr-4">Notes: {getTotalNotes()}</span>
