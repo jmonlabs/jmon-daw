@@ -61,6 +61,10 @@ const [selectedEffect, setSelectedEffect] = createSignal(null);
 const [effectParams, setEffectParams] = createSignal({});
 const [contextMenu, setContextMenu] = createSignal(null);
 const [clipboard, setClipboard] = createSignal(null);
+const [showNoteProperties, setShowNoteProperties] = createSignal(false);
+const [editingNote, setEditingNote] = createSignal(null);
+const [editingNoteIndex, setEditingNoteIndex] = createSignal(-1);
+const [editingTrackId, setEditingTrackId] = createSignal(null);
 
 // Undo/Redo system
 const [undoStack, setUndoStack] = createSignal([]);
@@ -517,6 +521,18 @@ export const dawStore = {
   get clipboard() {
     return clipboard();
   },
+  get showNoteProperties() {
+    return showNoteProperties();
+  },
+  get editingNote() {
+    return editingNote();
+  },
+  get editingNoteIndex() {
+    return editingNoteIndex();
+  },
+  get editingTrackId() {
+    return editingTrackId();
+  },
   get jmonData() {
     return jmonData;
   },
@@ -777,6 +793,11 @@ export const dawStore = {
       effects: [],
       verticalZoom: 4.0,
       verticalScroll: 0,
+      automation: {
+        channels: [],
+        enabled: true,
+        visible: false
+      },
     };
 
     const newSequence = {
@@ -970,6 +991,33 @@ export const dawStore = {
   },
   setContextMenu: (menu) => setContextMenu(menu),
   setClipboard: (data) => setClipboard(data),
+  
+  // Note Properties Dialog
+  get showNoteProperties() {
+    return showNoteProperties();
+  },
+  get editingNote() {
+    return editingNote();
+  },
+  get editingNoteIndex() {
+    return editingNoteIndex();
+  },
+  get editingTrackId() {
+    return editingTrackId();
+  },
+  setShowNoteProperties: (show) => setShowNoteProperties(show),
+  setEditingNote: (note) => setEditingNote(note),
+  setEditingNoteIndex: (index) => setEditingNoteIndex(index),
+  setEditingTrackId: (trackId) => setEditingTrackId(trackId),
+  saveNoteProperties: (updatedNote) => {
+    const trackIndex = tracks.findIndex((t) => t.id === editingTrackId());
+    const noteIndex = editingNoteIndex();
+    if (trackIndex !== -1 && noteIndex >= 0) {
+      const updatedNotes = [...tracks[trackIndex].notes];
+      updatedNotes[noteIndex] = updatedNote;
+      dawStore.updateTrack(editingTrackId(), { notes: updatedNotes });
+    }
+  },
   updateEffectParam: (key, value) => {
     setEffectParams((prev) => ({ ...prev, [key]: value }));
   },
@@ -1153,6 +1201,12 @@ export const dawStore = {
         verticalZoom: 4.0,
         verticalScroll: 0,
         height: 150,
+        // Automation properties
+        automation: {
+          channels: [],
+          enabled: true,
+          visible: false
+        },
       };
 
       // Apply auto-zoom for tracks with notes
@@ -1170,6 +1224,9 @@ export const dawStore = {
 
     setTracks(demoTracks);
     setBpm(demo01BasicSynth.bpm);
+
+    // Ensure all tracks have automation property (migration for existing data)
+    dawStore.migrateTracksForAutomation();
 
     // Validate and fix any invalid synth types after loading demo
     dawStore.validateAndFixSynthTypes();
@@ -1649,7 +1706,210 @@ export const dawStore = {
       }
     });
   },
+
+  // Automation-related actions
+  addAutomationChannel: (trackId, channelType, channelData) => {
+    // Record state before action
+    pushToUndoStack("Add automation channel");
+
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    const newChannel = {
+      id: `${channelType}_${Date.now()}`,
+      type: channelType,
+      name: channelData.name || channelType,
+      range: channelData.range || [0, 127],
+      color: channelData.color || '#6c757d',
+      points: channelData.points || [
+        { time: 0, value: channelData.defaultValue || 0 },
+        { time: 4, value: channelData.defaultValue || 0 }
+      ],
+      visible: true,
+      customCC: channelData.customCC || null
+    };
+
+    setTracks(trackIndex, 'automation', 'channels', prev => [...prev, newChannel]);
+    
+    console.log(`🎛️ Added automation channel ${newChannel.name} to track ${trackId}`);
+  },
+
+  removeAutomationChannel: (trackId, channelId) => {
+    // Record state before action
+    pushToUndoStack("Remove automation channel");
+
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    setTracks(trackIndex, 'automation', 'channels', prev => 
+      prev.filter(channel => channel.id !== channelId)
+    );
+    
+    console.log(`🎛️ Removed automation channel ${channelId} from track ${trackId}`);
+  },
+
+  updateAutomationChannel: (trackId, channelId, updates) => {
+    // Record state before action
+    pushToUndoStack("Update automation channel");
+
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    const channelIndex = tracks[trackIndex].automation.channels.findIndex(
+      channel => channel.id === channelId
+    );
+    if (channelIndex === -1) return;
+
+    setTracks(trackIndex, 'automation', 'channels', channelIndex, updates);
+    
+    console.log(`🎛️ Updated automation channel ${channelId} on track ${trackId}`);
+  },
+
+  addAutomationPoint: (trackId, channelId, time, value) => {
+    // Record state before action
+    pushToUndoStack("Add automation point");
+
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    const channelIndex = tracks[trackIndex].automation.channels.findIndex(
+      channel => channel.id === channelId
+    );
+    if (channelIndex === -1) return;
+
+    const channel = tracks[trackIndex].automation.channels[channelIndex];
+    const newPoints = [...channel.points];
+    const existingPointIndex = newPoints.findIndex(p => Math.abs(p.time - time) < 0.1);
+    
+    if (existingPointIndex >= 0) {
+      // Update existing point
+      newPoints[existingPointIndex] = { time, value };
+    } else {
+      // Add new point
+      newPoints.push({ time, value });
+      newPoints.sort((a, b) => a.time - b.time);
+    }
+
+    setTracks(trackIndex, 'automation', 'channels', channelIndex, 'points', newPoints);
+    
+    console.log(`🎛️ Added/updated automation point at time ${time} with value ${value}`);
+  },
+
+  removeAutomationPoint: (trackId, channelId, pointIndex) => {
+    // Record state before action
+    pushToUndoStack("Remove automation point");
+
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    const channelIndex = tracks[trackIndex].automation.channels.findIndex(
+      channel => channel.id === channelId
+    );
+    if (channelIndex === -1) return;
+
+    const channel = tracks[trackIndex].automation.channels[channelIndex];
+    if (channel.points.length <= 2) return; // Keep at least 2 points
+
+    const newPoints = channel.points.filter((_, index) => index !== pointIndex);
+    setTracks(trackIndex, 'automation', 'channels', channelIndex, 'points', newPoints);
+    
+    console.log(`🎛️ Removed automation point at index ${pointIndex}`);
+  },
+
+  getAutomationValue: (trackId, channelId, time) => {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return null;
+
+    const channel = track.automation.channels.find(c => c.id === channelId);
+    if (!channel || channel.points.length === 0) return null;
+
+    // Find the two points to interpolate between
+    const points = channel.points.sort((a, b) => a.time - b.time);
+    
+    // If time is before first point, return first point value
+    if (time <= points[0].time) return points[0].value;
+    
+    // If time is after last point, return last point value
+    if (time >= points[points.length - 1].time) return points[points.length - 1].value;
+    
+    // Find the two points to interpolate between
+    for (let i = 0; i < points.length - 1; i++) {
+      if (time >= points[i].time && time <= points[i + 1].time) {
+        const t1 = points[i].time;
+        const t2 = points[i + 1].time;
+        const v1 = points[i].value;
+        const v2 = points[i + 1].value;
+        
+        // Linear interpolation
+        const factor = (time - t1) / (t2 - t1);
+        return v1 + (v2 - v1) * factor;
+      }
+    }
+    
+    return null;
+  },
+
+  setAutomationEnabled: (trackId, enabled) => {
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    setTracks(trackIndex, 'automation', 'enabled', enabled);
+    
+    console.log(`🎛️ Set automation enabled: ${enabled} for track ${trackId}`);
+  },
+
+  toggleAutomationVisible: (trackId) => {
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    // Ensure automation property exists
+    if (!tracks[trackIndex].automation) {
+      setTracks(trackIndex, 'automation', {
+        channels: [],
+        enabled: true,
+        visible: false
+      });
+    }
+
+    const currentVisibility = tracks[trackIndex].automation?.visible || false;
+    setTracks(trackIndex, 'automation', 'visible', !currentVisibility);
+    
+    console.log(`🎛️ Toggled automation visibility: ${!currentVisibility} for track ${trackId}`);
+  },
+
+  setAutomationVisible: (trackId, visible) => {
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    // Ensure automation property exists
+    if (!tracks[trackIndex].automation) {
+      setTracks(trackIndex, 'automation', {
+        channels: [],
+        enabled: true,
+        visible: false
+      });
+    }
+
+    setTracks(trackIndex, 'automation', 'visible', visible);
+    
+    console.log(`🎛️ Set automation visible: ${visible} for track ${trackId}`);
+  },
+
+  // Migration function to ensure all tracks have automation property
+  migrateTracksForAutomation: () => {
+    tracks.forEach((track, index) => {
+      if (!track.automation) {
+        setTracks(index, 'automation', {
+          channels: [],
+          enabled: true,
+          visible: false
+        });
+        console.log(`🔄 Migrated automation structure for track ${track.id}`);
+      }
+    });
+  },
 };
+
 
 // Export a hook-like function for compatibility
 export const useDawStore = () => dawStore;

@@ -1,6 +1,7 @@
-import { Show, For, createEffect } from "solid-js";
+import { Show, For, createEffect, createSignal } from "solid-js";
 import { useDawStore } from "../stores/dawStore";
 import TrackLane from "./TrackLane";
+import ModulationTimeline from "./ModulationTimeline";
 
 // Auto-zoom utility function
 const calculateOptimalZoom = (track) => {
@@ -94,6 +95,16 @@ export default function TrackRow(props) {
     props;
 
   let trackLaneSectionRef;
+  
+  // State for automation visibility with debouncing
+  const [showAutomation, setShowAutomation] = createSignal(false);
+  let automationTimeout;
+  
+  // Use stored automation visibility state instead of height-based detection
+  createEffect(() => {
+    const visible = track.automation?.visible || false;
+    setShowAutomation(visible);
+  });
 
   // Force synchronization of scroll when store.timelineScroll changes
   createEffect(() => {
@@ -111,10 +122,20 @@ export default function TrackRow(props) {
       class={`track-row ${store.selectedTrack === track.id ? "selected" : ""}`}
       style={`
         display: flex;
+        flex-direction: column;
         height: ${track.height || 80}px;
         position: relative;
       `}
     >
+      {/* Main Track Content - Piano Roll and Controls */}
+      <div
+        style="
+          display: flex;
+          flex: 1;
+          height: 100%;
+          position: relative;
+        "
+      >
       {/* Track Info Section - Redesigned with vertical title band */}
       <div
         class="track-info-section"
@@ -277,6 +298,27 @@ export default function TrackRow(props) {
               title={track.solo ? "Désactiver le solo" : "Activer le solo"}
             >
               S
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                store.toggleAutomationVisible(track.id);
+              }}
+              style={`
+                background-color: ${track.automation?.visible ? 'var(--primary-accent)' : 'var(--color-bg-secondary)'};
+                color: ${track.automation?.visible ? 'white' : 'var(--text-primary)'};
+                border: 1px solid var(--color-border-primary);
+                border-left: none;
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+                border-radius: 0;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              `}
+              title={track.automation?.visible ? "Masquer automation" : "Afficher automation"}
+            >
+              A
             </button>
             <button
               onClick={(e) => {
@@ -937,6 +979,41 @@ export default function TrackRow(props) {
           </div>
         </div>
       </Show>
+      </div>
+
+      {/* Modulation Timeline - Separate container to prevent layout bouncing */}
+      <div 
+        style={`
+          height: ${showAutomation() ? '200px' : '0px'};
+          transition: height 0.3s ease;
+          overflow: hidden;
+          border-top: ${showAutomation() ? '1px solid var(--border-color)' : 'none'};
+          flex-shrink: 0;
+          position: relative;
+          z-index: 1;
+        `}
+      >
+        <Show when={showAutomation()}>
+          <div style="
+            height: 200px; 
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+          ">
+            <ModulationTimeline 
+              trackId={track.id}
+              trackLength={Math.max(4, Math.ceil((track.notes || []).reduce((max, note) => {
+                const noteTime = typeof note.time === 'string' ? 
+                  parseFloat(note.time.split(':')[0]) || 0 : 
+                  note.time || 0;
+                return Math.max(max, noteTime + 1);
+              }, 4)))}
+              beatWidth={beatWidth}
+              timelineScroll={timelineScroll}
+            />
+          </div>
+        </Show>
+      </div>
     </div>
   );
 }

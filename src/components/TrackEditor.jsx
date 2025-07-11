@@ -379,7 +379,10 @@ export default function TrackEditor(props) {
                 onMouseDown={(e) => handleNoteMouseDown(note, index(), e)}
                 onMouseEnter={() => setHoverNote(index())}
                 onMouseLeave={() => setHoverNote(null)}
-                onContextMenu={(e) => e.preventDefault()}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleNoteContextMenu(note, index(), e);
+                }}
                 title={`${note.note} - Vel: ${Math.round((note.velocity || 0.8) * 127)} - Dur: ${note.duration}`}
               >
                 <span style="color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -450,54 +453,6 @@ export default function TrackEditor(props) {
           )}
         </div>
       </div>
-
-      {/* Context Menu */}
-      <Show when={contextMenu() && contextMenu().type === 'note'}>
-        <div 
-          class="context-menu dropdown-content has-background-dark"
-          style={`
-            position: fixed;
-            left: ${contextMenu().x}px;
-            top: ${contextMenu().y}px;
-            z-index: 50;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            min-width: 8rem;
-          `}
-        >
-          <a 
-            class="dropdown-item has-text-light"
-            onClick={() => { setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-copy"></i>
-            </span>
-            Copy
-          </a>
-          <a 
-            class="dropdown-item has-text-light"
-            onClick={() => { setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-clone"></i>
-            </span>
-            Duplicate
-          </a>
-          <hr class="dropdown-divider" />
-          <a 
-            class="dropdown-item has-text-danger"
-            onClick={() => { handleDeleteNote(contextMenu().noteIndex); setContextMenu(null); }}
-            style="cursor: pointer;"
-          >
-            <span class="icon is-small mr-1">
-              <i class="fas fa-trash"></i>
-            </span>
-            Delete
-          </a>
-        </div>
-      </Show>
 
       {/* Selection Indicator */}
       <Show when={store.selectedTrack === props.track.id}>

@@ -16,6 +16,7 @@ import JmonEditor from "./JmonEditor";
 import StatusBar from "./StatusBar";
 import NotificationSystem from "./NotificationSystem";
 import MasterBus from "./MasterBus";
+import NoteProperties from "./NoteProperties";
 import { snapTimeToGrid } from "../utils/noteConversion";
 
 // Loop Region Component for ruler
@@ -204,17 +205,6 @@ export default function Layout() {
   onMount(() => {
     keyboardHandler.init(store);
     store.loadDemo();
-
-    // Test notification after a delay to verify system works
-    setTimeout(() => {
-      console.log("Adding test notification...");
-      store.addNotification(
-        store.NOTIFICATION_TYPES.WARNING,
-        'Test Notification',
-        'This is a test to verify the notification system is working.',
-        8000
-      );
-    }, 2000);
 
     // Close context menu on click outside
     const handleClick = (e) => {
@@ -1015,119 +1005,7 @@ export default function Layout() {
 
         {/* Master Bus Panel - Overlay */}
         <Show when={store.masterBusOpen}>
-          <div
-            style="
-              position: absolute;
-              top: 0;
-              right: 0;
-              width: 300px;
-              height: 100%;
-              background-color: var(--color-bg-modal);
-              color: var(--text-primary);
-              border-left: 1px solid var(--border-color);
-              display: flex;
-              flex-direction: column;
-              z-index: 1100;
-              box-shadow: -2px 0 10px rgba(0,0,0,0.3);
-            "
-          >
-            <div style="padding: 0.75rem; border-bottom: 1px solid var(--bulma-border); display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #f5f5f5; font-weight: 600;">Master Bus</span>
-              <button
-                onClick={store.toggleMasterBus}
-                class="button is-dark is-small"
-                title="Close"
-              >
-                <i class="fa-solid fa-times"></i>
-              </button>
-            </div>
-
-            <div style="flex: 1; padding: 1rem; overflow-y: auto;">
-              {/* Master Bus Content */}
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                {/* Master Volume */}
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="color: #f5f5f5; min-width: 60px; font-size: 0.8rem;">
-                    Volume
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.8"
-                    style="flex: 1;"
-                  />
-                  <span style="color: #999; font-size: 0.7rem; min-width: 30px;">
-                    80%
-                  </span>
-                </div>
-
-                {/* Master Effects Chain */}
-                <div style="border-top: 1px solid #404040; padding-top: 0.5rem;">
-                  <h4 style="color: #f5f5f5; font-size: 0.8rem; margin-bottom: 0.5rem;">
-                    Effects Chain
-                  </h4>
-
-                  <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <div
-                      class="tag is-success is-small"
-                      style="font-size: 0.7rem; width: 100%; justify-content: center;"
-                    >
-                      High-Pass Filter
-                    </div>
-                    <div
-                      class="tag is-success is-small"
-                      style="font-size: 0.7rem; width: 100%; justify-content: center;"
-                    >
-                      EQ (4-Band)
-                    </div>
-                    <div
-                      class="tag is-success is-small"
-                      style="font-size: 0.7rem; width: 100%; justify-content: center;"
-                    >
-                      Compressor
-                    </div>
-                    <div
-                      class="tag is-success is-small"
-                      style="font-size: 0.7rem; width: 100%; justify-content: center;"
-                    >
-                      Limiter
-                    </div>
-                  </div>
-
-                  <button
-                    class="button is-dark is-small"
-                    style="width: 100%; height: 1.5rem; padding: 0; font-size: 0.7rem; margin-top: 0.5rem;"
-                    title="Add Master Effect"
-                  >
-                    <i class="fa-solid fa-plus"></i> Add Effect
-                  </button>
-                </div>
-
-                {/* Master Meters */}
-                <div style="border-top: 1px solid #404040; padding-top: 0.5rem;">
-                  <h4 style="color: #f5f5f5; font-size: 0.8rem; margin-bottom: 0.5rem;">
-                    Output Meters
-                  </h4>
-                  <div style="display: flex; gap: 0.5rem;">
-                    <div style="flex: 1; height: 100px; background-color: #1a1a1a; border: 1px solid var(--bulma-border); position: relative;">
-                      <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, #22c55e 0%, #eab308 70%, #ef4444 100%);"></div>
-                      <span style="position: absolute; bottom: 2px; left: 2px; font-size: 0.6rem; color: white;">
-                        L
-                      </span>
-                    </div>
-                    <div style="flex: 1; height: 100px; background-color: #1a1a1a; border: 1px solid var(--bulma-border); position: relative;">
-                      <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 65%; background: linear-gradient(to top, #22c55e 0%, #eab308 70%, #ef4444 100%);"></div>
-                      <span style="position: absolute; bottom: 2px; left: 2px; font-size: 0.6rem; color: white;">
-                        R
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <MasterBus />
         </Show>
 
         {/* JMON Editor Panel - Overlay */}
@@ -1290,6 +1168,30 @@ export default function Layout() {
             </a>
             <hr class="dropdown-divider" />
             <a
+              class="dropdown-item has-text-light"
+              onClick={() => {
+                // Open note properties dialog
+                const trackIndex = store.tracks.findIndex(
+                  (t) => t.id === store.contextMenu.trackId,
+                );
+                if (trackIndex !== -1) {
+                  const note = store.tracks[trackIndex].notes[store.contextMenu.noteIndex];
+                  store.setEditingNote(note);
+                  store.setEditingNoteIndex(store.contextMenu.noteIndex);
+                  store.setEditingTrackId(store.contextMenu.trackId);
+                  store.setShowNoteProperties(true);
+                }
+                store.setContextMenu(null);
+              }}
+              style="cursor: pointer;"
+            >
+              <span class="icon is-small mr-1">
+                <i class="fa-solid fa-cog"></i>
+              </span>
+              Properties
+            </a>
+            <hr class="dropdown-divider" />
+            <a
               class="dropdown-item has-text-danger"
               onClick={() => {
                 // Delete note
@@ -1315,37 +1217,6 @@ export default function Layout() {
             </a>
           </div>
         </Show>
-
-        {/* Debug/Test Controls */}
-        <div style="position: fixed; top: 10px; left: 10px; z-index: 9999; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px;">
-          <button 
-            onClick={() => {
-              console.log("🔍 Manual polyphony check triggered");
-              store.recheckPolyphony();
-            }}
-            style="background: #007bff; color: white; border: none; padding: 5px 10px; margin: 2px; border-radius: 3px; cursor: pointer; font-size: 12px;"
-          >
-            Check Polyphony
-          </button>
-          <button 
-            onClick={() => {
-              console.log("🗑️ Clearing all notifications");
-              store.clearNotifications();
-            }}
-            style="background: #dc3545; color: white; border: none; padding: 5px 10px; margin: 2px; border-radius: 3px; cursor: pointer; font-size: 12px;"
-          >
-            Clear Notifications
-          </button>
-          <button 
-            onClick={() => {
-              console.log("🧪 Adding test notification");
-              store.addNotification('warning', 'Test', 'This is a test notification', 10000);
-            }}
-            style="background: #28a745; color: white; border: none; padding: 5px 10px; margin: 2px; border-radius: 3px; cursor: pointer; font-size: 12px;"
-          >
-            Test Notification
-          </button>
-        </div>
       </main>
 
       {/* Status Bar */}
@@ -1356,11 +1227,15 @@ export default function Layout() {
         notifications={store.notifications}
         removeNotification={store.removeNotification}
       />
-      
-      {/* Debug logging */}
-      {console.log("💻 Layout: store.notifications type:", typeof store.notifications)}
-      {console.log("💻 Layout: store.notifications():", store.notifications())}
-      {console.log("💻 Layout: store.notifications() length:", store.notifications().length)}
+
+      {/* Note Properties Dialog */}
+      <NoteProperties
+        note={() => store.editingNote}
+        isOpen={() => store.showNoteProperties}
+        onClose={() => store.setShowNoteProperties(false)}
+        onSave={store.saveNoteProperties}
+        trackId={() => store.editingTrackId}
+      />
     </div>
   );
 }

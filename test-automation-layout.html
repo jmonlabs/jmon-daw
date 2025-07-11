@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Timeline Layout Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .track-row {
+            display: flex;
+            flex-direction: column;
+            height: 120px;
+            border: 1px solid #333;
+            margin-bottom: 10px;
+            background: #2a2a2a;
+            transition: all 0.3s ease;
+        }
+        
+        .main-track-content {
+            display: flex;
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+        
+        .track-info {
+            width: 200px;
+            background: #3a3a3a;
+            padding: 10px;
+            border-right: 1px solid #333;
+        }
+        
+        .track-lane {
+            flex: 1;
+            background: #4a4a4a;
+            padding: 10px;
+            text-align: center;
+            line-height: 100px;
+        }
+        
+        .automation-container {
+            transition: height 0.3s ease;
+            overflow: hidden;
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+        }
+        
+        .automation-timeline {
+            height: 200px;
+            background: #2a2a2a;
+            padding: 10px;
+            text-align: center;
+            line-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .toggle-btn {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        
+        .toggle-btn.active {
+            background: #0066cc;
+        }
+        
+        .demo-track {
+            transition: height 0.3s ease;
+        }
+        
+        .demo-track.expanded {
+            height: 320px; /* 120px + 200px */
+        }
+    </style>
+</head>
+<body>
+    <h1>Automation Timeline Layout Test</h1>
+    <p>Testing the fix for ModulationTimeline bouncing issue</p>
+    
+    <div class="track-row demo-track" id="track1">
+        <div class="main-track-content">
+            <div class="track-info">
+                <h3>Track 1</h3>
+                <button class="toggle-btn" onclick="toggleAutomation('track1')">
+                    Toggle Automation
+                </button>
+            </div>
+            <div class="track-lane">
+                Piano Roll / Track Lane
+            </div>
+        </div>
+        <div class="automation-container" id="automation1" style="height: 0px;">
+            <div class="automation-timeline">
+                ModulationTimeline Component
+            </div>
+        </div>
+    </div>
+    
+    <div class="track-row demo-track" id="track2">
+        <div class="main-track-content">
+            <div class="track-info">
+                <h3>Track 2</h3>
+                <button class="toggle-btn" onclick="toggleAutomation('track2')">
+                    Toggle Automation
+                </button>
+            </div>
+            <div class="track-lane">
+                Piano Roll / Track Lane
+            </div>
+        </div>
+        <div class="automation-container" id="automation2" style="height: 0px;">
+            <div class="automation-timeline">
+                ModulationTimeline Component
+            </div>
+        </div>
+    </div>
+    
+    <div class="track-row demo-track" id="track3">
+        <div class="main-track-content">
+            <div class="track-info">
+                <h3>Track 3</h3>
+                <button class="toggle-btn" onclick="toggleAutomation('track3')">
+                    Toggle Automation
+                </button>
+            </div>
+            <div class="track-lane">
+                Piano Roll / Track Lane
+            </div>
+        </div>
+        <div class="automation-container" id="automation3" style="height: 0px;">
+            <div class="automation-timeline">
+                ModulationTimeline Component
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleAutomation(trackId) {
+            const track = document.getElementById(trackId);
+            const automation = document.getElementById(trackId.replace('track', 'automation'));
+            const button = track.querySelector('.toggle-btn');
+            
+            if (automation.style.height === '0px') {
+                // Show automation
+                automation.style.height = '200px';
+                track.classList.add('expanded');
+                button.classList.add('active');
+                button.textContent = 'Hide Automation';
+            } else {
+                // Hide automation
+                automation.style.height = '0px';
+                track.classList.remove('expanded');
+                button.classList.remove('active');
+                button.textContent = 'Toggle Automation';
+            }
+        }
+    </script>
+</body>
+</html>

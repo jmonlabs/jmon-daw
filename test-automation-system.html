@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Automation System - JMON DAW</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .hero-section h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .hero-section p {
+            margin: 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-card {
+            background-color: #2a2a2a;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #007aff;
+        }
+        .feature-card h3 {
+            color: #007aff;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-card li {
+            padding: 5px 0;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .feature-card li:last-child {
+            border-bottom: none;
+        }
+        .check-mark {
+            color: #28a745;
+            margin-right: 8px;
+        }
+        .demo-section {
+            background-color: #2a2a2a;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .demo-timeline {
+            background-color: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .channel-preview {
+            background: linear-gradient(to right, rgba(0, 122, 255, 0.1), rgba(0, 122, 255, 0.2));
+            height: 60px;
+            border-radius: 4px;
+            margin: 10px 0;
+            position: relative;
+            border: 1px solid #007aff;
+        }
+        .channel-header {
+            background-color: #3a3a3a;
+            padding: 8px 12px;
+            border-radius: 4px 4px 0 0;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .curve-line {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            background: linear-gradient(to right, #007aff, #28a745, #ffc107, #dc3545);
+            border-radius: 1px;
+        }
+        .control-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #007aff;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .implementation-details {
+            background-color: #2a2a2a;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .code-snippet {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .warning-note {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-left: 3px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 10px 5px;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .button.success {
+            background-color: #28a745;
+        }
+        .button.success:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero-section">
+            <h1>🎛️ Professional Automation System</h1>
+            <p>Advanced modulation timeline with spline interpolation and real-time control</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3><i class="fas fa-wave-square"></i> Control Channels</h3>
+                <ul>
+                    <li><span class="check-mark">✅</span>Velocity automation</li>
+                    <li><span class="check-mark">✅</span>Pitch Bend curves</li>
+                    <li><span class="check-mark">✅</span>Modulation (CC1)</li>
+                    <li><span class="check-mark">✅</span>Expression (CC11)</li>
+                    <li><span class="check-mark">✅</span>Sustain (CC64)</li>
+                    <li><span class="check-mark">✅</span>Filter Cutoff (CC74)</li>
+                    <li><span class="check-mark">✅</span>Custom CC channels</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3><i class="fas fa-mouse-pointer"></i> Interactive Timeline</h3>
+                <ul>
+                    <li><span class="check-mark">✅</span>Click to add control points</li>
+                    <li><span class="check-mark">✅</span>Drag points to adjust values</li>
+                    <li><span class="check-mark">✅</span>Shift+click to remove points</li>
+                    <li><span class="check-mark">✅</span>Smooth spline interpolation</li>
+                    <li><span class="check-mark">✅</span>Real-time visual feedback</li>
+                    <li><span class="check-mark">✅</span>Grid snapping</li>
+                    <li><span class="check-mark">✅</span>Multi-channel stacking</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3><i class="fas fa-cogs"></i> Professional Features</h3>
+                <ul>
+                    <li><span class="check-mark">✅</span>Color-coded channels</li>
+                    <li><span class="check-mark">✅</span>Dynamic value ranges</li>
+                    <li><span class="check-mark">✅</span>Channel add/remove</li>
+                    <li><span class="check-mark">✅</span>Tooltips with values</li>
+                    <li><span class="check-mark">✅</span>Scrollable timeline</li>
+                    <li><span class="check-mark">✅</span>MIDI export compatibility</li>
+                    <li><span class="check-mark">✅</span>Clean, modern UI</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎨 Visual Preview</h2>
+            <p>Here's how the automation timeline looks below the piano roll:</p>
+            
+            <div class="demo-timeline">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4 style="margin: 0; color: #ffffff;">Automation & Control Channels</h4>
+                    <button class="button" style="font-size: 0.8rem; padding: 6px 12px;">
+                        + Add Channel
+                    </button>
+                </div>
+                
+                <div class="warning-note">
+                    <i class="fas fa-info-circle" style="color: #ffc107; margin-right: 8px;"></i>
+                    Note: Automation data is not saved in JMON format. Export as MIDI to preserve modulation.
+                </div>
+                
+                <!-- Velocity Channel -->
+                <div style="margin-bottom: 15px; border: 1px solid #3a3a3a; border-radius: 4px;">
+                    <div class="channel-header">
+                        <span style="color: #28a745; margin-right: 8px;">●</span>
+                        Velocity [0 - 127]
+                    </div>
+                    <div class="channel-preview">
+                        <div class="curve-line"></div>
+                        <div class="control-point" style="top: 20px; left: 50px;"></div>
+                        <div class="control-point" style="top: 35px; left: 200px;"></div>
+                        <div class="control-point" style="top: 15px; left: 350px;"></div>
+                    </div>
+                </div>
+                
+                <!-- Pitch Bend Channel -->
+                <div style="margin-bottom: 15px; border: 1px solid #3a3a3a; border-radius: 4px;">
+                    <div class="channel-header">
+                        <span style="color: #007aff; margin-right: 8px;">●</span>
+                        Pitch Bend [-8192 - 8191]
+                    </div>
+                    <div class="channel-preview">
+                        <div class="curve-line" style="background: linear-gradient(to right, #007aff, #dc3545, #007aff);"></div>
+                        <div class="control-point" style="top: 30px; left: 80px; background-color: #007aff;"></div>
+                        <div class="control-point" style="top: 10px; left: 180px; background-color: #007aff;"></div>
+                        <div class="control-point" style="top: 45px; left: 280px; background-color: #007aff;"></div>
+                        <div class="control-point" style="top: 30px; left: 380px; background-color: #007aff;"></div>
+                    </div>
+                </div>
+                
+                <!-- Modulation Channel -->
+                <div style="border: 1px solid #3a3a3a; border-radius: 4px;">
+                    <div class="channel-header">
+                        <span style="color: #dc3545; margin-right: 8px;">●</span>
+                        Modulation (CC1) [0 - 127]
+                    </div>
+                    <div class="channel-preview">
+                        <div class="curve-line" style="background: linear-gradient(to right, #dc3545, #ffc107, #dc3545);"></div>
+                        <div class="control-point" style="top: 45px; left: 30px; background-color: #dc3545;"></div>
+                        <div class="control-point" style="top: 15px; left: 150px; background-color: #dc3545;"></div>
+                        <div class="control-point" style="top: 25px; left: 300px; background-color: #dc3545;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="implementation-details">
+            <h2><i class="fas fa-code"></i> Implementation Details</h2>
+            
+            <h3>Core Features Implemented:</h3>
+            <div class="code-snippet">
+// ModulationTimeline.jsx - Key capabilities:
+- Dynamic channel creation with 7 predefined types
+- Interactive SVG-based timeline with spline curves  
+- Real-time point manipulation (add/move/remove)
+- Smooth interpolation between control points
+- Visual grid and measure markers
+- Professional DAW-style interface
+- MIDI export ready data structure</div>
+
+            <h3>Available Modulation Types:</h3>
+            <ul>
+                <li><strong style="color: #28a745;">Velocity (0-127):</strong> Note velocity automation</li>
+                <li><strong style="color: #007aff;">Pitch Bend (±8192):</strong> Smooth pitch modulation</li>
+                <li><strong style="color: #dc3545;">Modulation (CC1):</strong> Vibrato and tremolo effects</li>
+                <li><strong style="color: #ffc107;">Expression (CC11):</strong> Dynamic expression control</li>
+                <li><strong style="color: #6f42c1;">Sustain (CC64):</strong> Pedal automation</li>
+                <li><strong style="color: #20c997;">Filter Cutoff (CC74):</strong> Real-time filter sweeps</li>
+                <li><strong style="color: #6c757d;">Custom CC:</strong> User-defined control channels</li>
+            </ul>
+
+            <h3>Usage Instructions:</h3>
+            <ol>
+                <li>Click <strong>"+ Add Channel"</strong> to create a new automation lane</li>
+                <li>Select the type of modulation from the dropdown menu</li>
+                <li><strong>Click anywhere</strong> on the timeline to add control points</li>
+                <li><strong>Drag points</strong> to adjust timing and values</li>
+                <li><strong>Shift+click points</strong> to remove them</li>
+                <li>Values are interpolated smoothly between points using splines</li>
+                <li>Export as MIDI to preserve automation data</li>
+            </ol>
+        </div>
+
+        <div class="warning-note">
+            <h3><i class="fas fa-exclamation-triangle"></i> Important Notes</h3>
+            <ul>
+                <li>Automation data is <strong>not stored in JMON format</strong></li>
+                <li>Use <strong>MIDI export</strong> to preserve modulation curves</li>
+                <li>Each channel maintains its own timeline and value range</li>
+                <li>Spline interpolation provides smooth, musical transitions</li>
+                <li>Compatible with standard MIDI CC protocols</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <button class="button success" onclick="window.location.href='index.html'">
+                🎹 Try in DAW
+            </button>
+            <button class="button" onclick="window.location.href='test-note-properties.html'">
+                📋 Note Properties
+            </button>
+            <button class="button" onclick="window.location.href='test-effects.html'">
+                🎛️ Effects System
+            </button>
+        </div>
+    </div>
+</body>
+</html>

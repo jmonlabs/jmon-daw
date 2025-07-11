@@ -1,5 +1,11 @@
 import * as Tone from 'tone';
 import { getSampleUrls, createJmonSampleConfig } from './sampleLibrary';
+import { 
+  createAutomationSchedule, 
+  applyAutomationToToneNode, 
+  getAutomationTargets 
+} from '../components/automation/automationMapping.js';
+import { getAutomationValueAtTime } from '../components/automation/automationUtils.js';
 
 class AudioEngine {
   constructor() {
@@ -10,6 +16,8 @@ class AudioEngine {
     this.connections = [];
     this.currentSequences = [];
     this.previewSynths = new Map(); // For real-time note previews
+    this.automationSchedule = new Map(); // Track automation schedules
+    this.activeAutomationEvents = []; // Currently scheduled automation events
   }
 
   async init() {
@@ -403,6 +411,13 @@ class AudioEngine {
     if (Tone.Transport.state === 'stopped' || isAtStart) {
       // Always use full scheduling when starting from the beginning
       this.rescheduleCurrentSequences();
+      
+      // Schedule DAW track automation
+      if (this.currentDawTracks && this.currentDawTracks.length > 0) {
+        const trackLength = Math.max(16, this.currentJmonData?.totalLength || 16);
+        this.scheduleTrackAutomation(this.currentDawTracks, 0, trackLength);
+      }
+      
       Tone.Transport.start();
       console.log(`🎵 Transport started from ${isAtStart ? 'beginning' : 'stopped state'}`);
     } else if (Tone.Transport.state === 'paused') {
@@ -411,6 +426,14 @@ class AudioEngine {
       
       // Reschedule events that haven't played yet from this position
       this.rescheduleFromCurrentPosition();
+      
+      // Reschedule automation from current position
+      if (this.currentDawTracks && this.currentDawTracks.length > 0) {
+        const currentTimeInMeasures = Tone.Time(currentPosition).toBarsBeatsSixteenths().split(':')[0];
+        const remainingLength = Math.max(16, this.currentJmonData?.totalLength || 16) - parseFloat(currentTimeInMeasures);
+        this.scheduleTrackAutomation(this.currentDawTracks, parseFloat(currentTimeInMeasures), remainingLength);
+      }
+      
       Tone.Transport.start();
       console.log(`🎵 Transport resumed from pause`);
     }
@@ -559,11 +582,15 @@ class AudioEngine {
 
   stop() {
     Tone.Transport.stop();
+    // Clear automation when stopping
+    this.clearAutomationSchedule();
   }
 
   clear() {
     // Clear all scheduled events from Transport
     Tone.Transport.cancel();
+    // Also clear automation
+    this.clearAutomationSchedule();
   }
 
   setBpm(bpm) {
@@ -913,16 +940,26 @@ class AudioEngine {
   // Update effect parameters in real-time
   updateEffectParameter(effectId, parameter, value) {
     const effect = this.audioGraph.get(effectId);
-    if (effect && effect[parameter]) {
-      try {
-        if (effect[parameter].value !== undefined) {
-          effect[parameter].value = value;
-        } else {
-          effect[parameter] = value;
-        }
-      } catch (error) {
-        console.warn(`Failed to update ${effectId}.${parameter}:`, error);
+    if (!effect) {
+      console.warn(`🎛️ Effect not found: ${effectId}`);
+      return;
+    }
+    
+    if (!effect[parameter]) {
+      console.warn(`🎛️ Parameter not found: ${effectId}.${parameter}`);
+      return;
+    }
+    
+    try {
+      if (effect[parameter].value !== undefined) {
+        effect[parameter].value = value;
+        console.log(`🎛️ Updated ${effectId}.${parameter} = ${value}`);
+      } else {
+        effect[parameter] = value;
+        console.log(`🎛️ Updated ${effectId}.${parameter} = ${value}`);
       }
+    } catch (error) {
+      console.warn(`🎛️ Failed to update ${effectId}.${parameter}:`, error);
     }
   }
   
@@ -951,6 +988,183 @@ class AudioEngine {
     this.synths.clear();
     
     console.log('🧹 Audio graph and synths cleared');
+  }
+
+  // === DAW TRACK AUTOMATION INTEGRATION ===
+
+  /**
+   * Schedule automation for DAW tracks (not JMON automation)
+   * @param {Array} dawTracks - Array of DAW track objects with automation data
+   * @param {number} startTime - Start time in measures
+   * @param {number} duration - Duration to schedule automation for
+   */
+  scheduleTrackAutomation(dawTracks, startTime = 0, duration = 16) {
+    if (!dawTracks || !Array.isArray(dawTracks)) {
+      console.warn('🎛️ No DAW tracks provided for automation scheduling');
+      return;
+    }
+
+    // Clear existing automation events
+    this.clearAutomationSchedule();
+
+    dawTracks.forEach((track, trackIndex) => {
+      if (!track.automation || !track.automation.channels || track.automation.channels.length === 0) {
+        return; // Skip tracks without automation
+      }
+
+      console.log(`🎛️ Scheduling automation for track: ${track.name || `Track ${trackIndex}`}`);
+
+      // Create automation schedule for this track
+      const schedule = createAutomationSchedule(track, startTime, duration);
+      
+      if (schedule.length === 0) {
+        console.log(`🎛️ No automation events for track: ${track.name}`);
+        return;
+      }
+
+      // Store the schedule
+      this.automationSchedule.set(track.id, schedule);
+
+      // Schedule each automation event with Tone.js Transport
+      schedule.forEach(event => {
+        const transportTime = `${event.time}m`; // Convert measures to Tone.js time
+        
+        const scheduledId = Tone.Transport.schedule((time) => {
+          this.applyAutomationEvent(event, time);
+        }, transportTime);
+
+        // Keep track of scheduled events for cleanup
+        this.activeAutomationEvents.push({
+          id: scheduledId,
+          trackId: track.id,
+          time: event.time,
+          type: event.type
+        });
+      });
+
+      console.log(`🎛️ Scheduled ${schedule.length} automation events for track: ${track.name}`);
+    });
+
+    console.log(`🎛️ Total automation events scheduled: ${this.activeAutomationEvents.length}`);
+  }
+
+  /**
+   * Apply an automation event to Tone.js parameters
+   * @param {Object} event - Automation event object
+   * @param {number} time - Tone.js scheduled time
+   */
+  applyAutomationEvent(event, time) {
+    try {
+      const { type, value, targets, channel } = event;
+      
+      if (!targets) {
+        console.warn(`🎛️ No targets found for automation type: ${type}`);
+        return;
+      }
+
+      // Apply automation to target(s)
+      if (Array.isArray(targets)) {
+        targets.forEach(target => {
+          applyAutomationToToneNode(target, type, value, time);
+        });
+      } else {
+        applyAutomationToToneNode(targets, type, value, time);
+      }
+
+      console.log(`🎛️ Applied automation: ${type} = ${value} at time ${time}`);
+    } catch (error) {
+      console.error(`🎛️ Error applying automation event:`, error);
+    }
+  }
+
+  /**
+   * Get current automation value for a track and channel type at specific time
+   * @param {string} trackId - Track ID
+   * @param {string} automationType - Type of automation (velocity, pitchBend, etc.)
+   * @param {number} time - Current time in measures
+   * @returns {number|null} Current automation value or null if not found
+   */
+  getCurrentAutomationValue(trackId, automationType, time) {
+    const track = this.currentDawTracks?.find(t => t.id === trackId);
+    if (!track || !track.automation || !track.automation.channels) {
+      return null;
+    }
+
+    const channel = track.automation.channels.find(c => c.type === automationType);
+    if (!channel || !channel.points) {
+      return null;
+    }
+
+    return getAutomationValueAtTime(channel.points, time, channel.range);
+  }
+
+  /**
+   * Clear all scheduled automation events
+   */
+  clearAutomationSchedule() {
+    // Cancel all scheduled automation events
+    this.activeAutomationEvents.forEach(event => {
+      Tone.Transport.clear(event.id);
+    });
+
+    this.activeAutomationEvents = [];
+    this.automationSchedule.clear();
+
+    console.log('🎛️ Cleared all automation schedules');
+  }
+
+  /**
+   * Update automation for a specific track (called when automation is edited)
+   * @param {string} trackId - Track ID to update
+   * @param {Object} track - Updated track object
+   * @param {number} currentTime - Current playback time
+   * @param {number} duration - Duration to schedule ahead
+   */
+  updateTrackAutomation(trackId, track, currentTime = 0, duration = 16) {
+    // Clear existing automation for this track
+    const existingEvents = this.activeAutomationEvents.filter(event => event.trackId === trackId);
+    existingEvents.forEach(event => {
+      Tone.Transport.clear(event.id);
+    });
+
+    // Remove from active events
+    this.activeAutomationEvents = this.activeAutomationEvents.filter(event => event.trackId !== trackId);
+
+    // Remove from schedule
+    this.automationSchedule.delete(trackId);
+
+    // Re-schedule automation for this track
+    this.scheduleTrackAutomation([track], currentTime, duration);
+
+    console.log(`🎛️ Updated automation for track: ${track.name}`);
+  }
+
+  /**
+   * Apply real-time automation value (for immediate parameter changes)
+   * @param {string} trackId - Track ID
+   * @param {string} automationType - Type of automation
+   * @param {number} value - Automation value to apply
+   */
+  applyRealtimeAutomation(trackId, automationType, value) {
+    const track = this.currentDawTracks?.find(t => t.id === trackId);
+    if (!track) {
+      console.warn(`🎛️ Track not found for realtime automation: ${trackId}`);
+      return;
+    }
+
+    // Find the synth for this track
+    const synthId = `sequence_synth_${this.currentDawTracks.indexOf(track)}`;
+    const synth = this.synths.get(synthId);
+    
+    if (!synth) {
+      console.warn(`🎛️ Synth not found for track: ${trackId}`);
+      return;
+    }
+
+    // Apply automation immediately
+    applyAutomationToToneNode(synth, automationType, value, 'now');
+    
+    console.log(`🎛️ Applied realtime automation: ${automationType} = ${value} to track ${trackId}`);
   }
   
   // Schedule JMON automation events
@@ -1038,9 +1252,80 @@ class AudioEngine {
   // Set master effects chain
   setMasterEffects(effects) {
     console.log('🎛️ Setting master effects:', effects);
-    // This would require rebuilding the master effects chain
-    // For now, just log the effects
-    // TODO: Implement master effects chain rebuilding
+    
+    // First, disconnect all existing master effects
+    this.clearMasterEffects();
+    
+    if (!effects || effects.length === 0) {
+      // No effects, set master to Tone.Destination directly
+      this.audioGraph.set('master', Tone.Destination);
+      console.log('🎛️ No master effects, using direct destination');
+      return;
+    }
+    
+    // Build master effects chain
+    let currentNode = null;
+    let firstNode = null;
+    
+    effects.forEach((effectConfig, index) => {
+      const effectId = `master_effect_${index}`;
+      const effectNode = this.createAudioNode({
+        id: effectId,
+        type: effectConfig.type,
+        options: effectConfig.options || {}
+      });
+      
+      if (effectNode) {
+        console.log(`🎛️ Created master effect ${effectConfig.type} (${effectId})`);
+        this.audioGraph.set(effectId, effectNode);
+        
+        if (!firstNode) {
+          firstNode = effectNode;
+        }
+        
+        if (currentNode) {
+          currentNode.connect(effectNode);
+        }
+        
+        currentNode = effectNode;
+      } else {
+        console.error(`🎛️ Failed to create master effect ${effectConfig.type}`);
+      }
+    });
+    
+    // Connect the last effect to Tone.Destination
+    if (currentNode) {
+      currentNode.connect(Tone.Destination);
+      console.log('🎛️ Connected master effect chain to destination');
+    }
+    
+    // Set the first effect node as the new master destination
+    if (firstNode) {
+      this.audioGraph.set('master', firstNode);
+      console.log('🎛️ Set master effects chain as new master destination');
+    } else {
+      this.audioGraph.set('master', Tone.Destination);
+    }
+    
+    // Rebuild audio graph to reconnect all tracks to the new master chain
+    console.log('🎛️ Rebuilding audio graph to connect tracks to master effects...');
+    if (window.dawStore) {
+      this.buildAudioGraph(window.dawStore.jmonData, window.dawStore.tracks);
+    }
+  }
+  
+  clearMasterEffects() {
+    // Dispose existing master effects
+    const keysToRemove = [];
+    this.audioGraph.forEach((node, id) => {
+      if (id.startsWith('master_effect_') && node !== Tone.Destination && node.dispose) {
+        console.log(`🎛️ Disposing master effect: ${id}`);
+        node.dispose();
+        keysToRemove.push(id);
+      }
+    });
+    
+    keysToRemove.forEach(key => this.audioGraph.delete(key));
   }
 
   // Check for overlapping notes in monophonic synths and warn user

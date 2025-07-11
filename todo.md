@@ -14,7 +14,7 @@
 - Après une pause, le point de redémarrage est placé à la mauvaise position.
 - Assures-toi que les différentes propriétés des éléments sont bien synchronisés avec le texte du JMON dans </> ✓ COMPLETED
 - Les notes devraient être étirables de part et d'autre. ✓ COMPLETED
-- Assure-toi que les effets fonctionnent bien. Je ne les entends pas.
+- Assure-toi que les effets fonctionnent bien. Je ne les entends pas. ✓ FIXED
 - Aménage la loop en un rectangle dans la règle, qui défini le début et la fin de la boucle. La boîte de loop peut être déplacée et redimensionnée pour définir la durée de la boucle. Elle ne doit pas superposer entièrement la règle, pour laisser de l'espace pour déplacer la barre verticale de lecture. ✓ COMPLETED
 - Snap should work on dragging note handles ✓ COMPLETED
 - assures-toi que le pan et le volume des tracks fonctionne bien ✓ COMPLETED
@@ -38,8 +38,6 @@
 - Boutons Mute et Solo: changer l'arrière-plan en bleu quand activés au lieu de bordure incomplète ✓ COMPLETED
 - Nouvelles tracks: corriger l'initialisation du synthé pour qu'elles produisent du son ✓ COMPLETED
 - Volumes: améliorer le débogage et la gestion des volumes ✓ COMPLETED
-
-## AUDIO ENGINE FIXES
 - Fixed "Unknown audio node type" error for invalid synth types ✓ COMPLETED
 - Added support for MetalSynth and MembraneSynth (initially incorrectly marked as invalid) ✓ COMPLETED
 - Added fallback to default Synth for truly unknown synth types to prevent null synthNode ✓ COMPLETED
@@ -53,8 +51,6 @@
 - Nouvelles tracks: toutes les notes ne sont pas jouées (problème résolu avec PolySynth par défaut) ✓ FIXED
 - Sequences "fantômes" causant des notes dupliquées/manquantes ✓ FIXED
 - Implemented user-facing notification system for polyphony warnings and other notifications ✓ COMPLETED
-
-## NOTIFICATION SYSTEM COMPLETED
 - Created NotificationSystem component with modern UI and animations ✓ COMPLETED
 - Integrated notification system into Layout with proper positioning ✓ COMPLETED
 - Added notification types: INFO, WARNING, ERROR, SUCCESS, POLYPHONY ✓ COMPLETED
@@ -62,20 +58,39 @@
 - Added polyphony warning notifications with "Switch to PolySynth" action ✓ COMPLETED
 - Updated audioEngine to use UI notifications instead of console only ✓ COMPLETED
 - Added test notifications for new tracks and app loading ✓ COMPLETED
+- retire l'item "theme" dans le menu hamburger, ajoute plutôt un bouton dark theme (<i class="fa-solid fa-moon"></i>) / light theme (<i class="fa-solid fa-sun"></i>) dans l'entête ✓ COMPLETED
+- Peux-tu rendre le DAW plus "responsive" à la dimension de la page? Lorsque les éléments de l'entête commencent à se chevaucher, les placer dans le menu hamburger ✓ COMPLETED
+- retravaille la fenêtre Master de sorte qu'elle fonctionne en stack de la même manière que les stacks d'effet des tracks. ✓ COMPLETED
+- Les boutons Master et pour rétracter la colonne des effets sont trop gros: il dépassent sous leur cadre. ✓ COMPLETED
+- ajoute un élément au clic droit des notes du pianoroll nommé "Properties". Cet item mène à une boîte de dialogue permettant d'ajuster les propriétés de la note: pitch, duration, time, ainsi que les effets appliqués aux notes seulement (e.g. pitch bend, mais y en a-t-il d'autres?) ✓ COMPLETED (FIXED: added to correct context menu in Layout.jsx)
+- Removed per-note effects from NoteProperties.jsx (now only basic properties: pitch, duration, time, velocity) ✓ COMPLETED
+- Removed phantom context menu code from TrackEditor.jsx ✓ COMPLETED
+- Created professional ModulationTimeline.jsx component with interactive automation lanes ✓ COMPLETED
+- Integrated automation data structure into dawStore.js with full CRUD operations ✓ COMPLETED
+- Added automation methods: addAutomationChannel, removeAutomationChannel, updateAutomationChannel, addAutomationPoint, removeAutomationPoint, getAutomationValue ✓ COMPLETED
+- Updated track structure to include automation: { channels: [], enabled: true } ✓ COMPLETED
+- Connected ModulationTimeline to dawStore for persistent automation data ✓ COMPLETED
+- Added support for multiple automation types: velocity, pitch bend, modulation, expression, sustain, filter cutoff, custom CC ✓ COMPLETED
+- Implemented spline-based automation curves with interactive control points ✓ COMPLETED
+- Added proper error handling and undo/redo support for automation operations ✓ COMPLETED
+- Améliore la rapidité du chargement. ✓ COMPLETED
+- tu écris "Le menu contextuel dans TrackEditor.jsx n'est pas utilisé". Peux-tu retirer ce code fantôme? ✓ COMPLETED
+- Créer un système d'automation professionnelle avec timeline de modulation (pitch bend, velocity, control channels) ✓ INTEGRATED WITH STORE
+- Intégrer les données d'automation dans dawStore.js pour la persistance et l'édition ✓ COMPLETED
 
 ## REMAINING ISSUES
-- retire l'item "theme" dans le menu hamburger, ajoute plutôt un bouton dark theme (<i class="fa-solid fa-moon"></i>) / light theme (<i class="fa-solid fa-sun"></i>) dans l'entête ✓ COMPLETED
-- retravaille la fenêtre Master de sorte qu'elle fonctionne en stack de la même manière que les stacks d'effet des tracks. ✓ COMPLETED
-- Peux-tu rendre le DAW plus "responsive" à la dimension de la page? Lorsque les éléments de l'entête commencent à se chevaucher, les placer dans le menu hamburger ✓ COMPLETED
-- la barre verticale de lecture se rouve à un z-index plus élevé que la fenêtre d'édition JMON et les dialogues des effets, qui devraient être placée au-dessus. ✓ COMPLETED
-- Les boutons Master et pour rétracter la colonne des effets sont trop gros: il dépassent sous leur cadre. ✓ COMPLETED
 
-- Répare les track avec les samplers
+- Fixed ModulationTimeline bouncing issue by implementing dedicated automation visibility toggle button (A) in track controls ✓ COMPLETED
+- Fixed automation property undefined error by ensuring all tracks have automation structure and adding migration function ✓ COMPLETED
+- Fixed ModulationTimeline bouncing by restructuring layout - moved automation timeline outside track-lane-section into separate container ✓ COMPLETED
+- Redesigned ModulationTimeline with professional UI matching mockup - improved visual design, better empty state, enhanced control points, synchronized horizontal scrolling ✓ COMPLETED
+- Connecter le système d'automation à la lecture audio (audioEngine.js) pour l'application des modulations en temps réel
+- Implémenter l'export MIDI pour les données d'automation
+- activer le scroll horizontal à deux doigts
+- la barre verticale de lecture se rouve à un z-index plus élevé que la fenêtre d'édition JMON et les dialogues des effets, qui devraient être placée au-dessus.
+- Samplers peut être sélectionné en tant que Synth. Sont menu doit être décliné comme suit: pour chaque note aparaissant dans la track, l'utilisateur est invité à inclure un lien local ou url vers un fichier audio.
 - Réfléchis à une manière d'implémenter les Signals de Tone.js
-
-
 - Lorsque j'appuie sur la touche HOME en cours de lecture, le son est réinitialisé, mais pas la barre verticale de lecture, qui continue son chemin.
 - Lorsque la loop est activée, le bouton pause redémarre la musique au début de la boucle au lieu de l'endroit où elle était arrêtée.
-- Améliore la rapidité du chargement.
 - Effectue un grand ménage du code, pour enlever les doublons ou le code fantôme, optimiser les fonctions trop compliquées pour rien, améliorer la lisibilité et documenter les fonctions, en utilisant le meilleur de SolidJS, Bulma, Tone.js et Zustand. Fait attention pour améliorer sans briser.
 

@@ -58,6 +58,23 @@ export default function Mixer() {
         e.id === effectId ? { ...e, ...updates } : e
       );
       store.updateTrack(trackId, { effects: updatedEffects });
+      
+      // Also update the audio engine effect parameters directly
+      if (window.audioEngine && window.audioEngine.isInitialized) {
+        const trackIndex = store.tracks.findIndex(t => t.id === trackId);
+        const effectIndex = track.effects.findIndex(e => e.id === effectId);
+        if (trackIndex !== -1 && effectIndex !== -1) {
+          const audioEffectId = `track_${trackIndex}_effect_${effectIndex}`;
+          
+          // Update each parameter in the effect's options
+          if (updates.options) {
+            Object.entries(updates.options).forEach(([param, value]) => {
+              console.log(`🎛️ Updating effect parameter: ${audioEffectId}.${param} = ${value}`);
+              window.audioEngine.updateEffectParameter(audioEffectId, param, value);
+            });
+          }
+        }
+      }
     }
   };
 

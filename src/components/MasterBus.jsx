@@ -35,7 +35,6 @@ export default function MasterBus() {
       options: getDefaultEffectOptions(effectType)
     };
     
-    // Add to master bus effects in store
     const currentMasterEffects = store.masterBusEffects || [];
     store.setMasterBusEffects([...currentMasterEffects, newEffect]);
   };
@@ -52,6 +51,27 @@ export default function MasterBus() {
       e.id === effectId ? { ...e, ...updates } : e
     );
     store.setMasterBusEffects(updatedEffects);
+    
+    // Also update the audio engine effect parameters directly
+    if (window.audioEngine && window.audioEngine.isInitialized) {
+      const effectIndex = currentMasterEffects.findIndex(e => e.id === effectId);
+      if (effectIndex !== -1) {
+        const audioEffectId = `master_effect_${effectIndex}`;
+        
+        // Update each parameter in the effect's options
+        if (updates.options) {
+          Object.entries(updates.options).forEach(([param, value]) => {
+            console.log(`🎛️ Updating master effect parameter: ${audioEffectId}.${param} = ${value}`);
+            window.audioEngine.updateEffectParameter(audioEffectId, param, value);
+          });
+        }
+      }
+    }
+  };
+
+  // Wrapper for EffectControls compatibility (expects trackId, effectId, updates)
+  const updateMasterEffectWrapper = (trackId, effectId, updates) => {
+    updateMasterEffect(effectId, updates);
   };
 
   const handleDragStart = (e, effect, index) => {
@@ -84,18 +104,17 @@ export default function MasterBus() {
     setDragOverIndex(null);
   };
 
-  const masterEffects = store.masterBusEffects || [];
+  const masterEffects = () => store.masterBusEffects || [];
 
   return (
     <div 
-      class="master-bus-panel"
       style="
         position: fixed;
         top: 3rem;
         right: 0;
-        width: 300px;
+        width: 250px;
         height: calc(100vh - 3rem);
-        background-color: var(--color-bg-elevated);
+        background-color: var(--color-bg-surface);
         border-left: 1px solid var(--color-border-primary);
         display: flex;
         flex-direction: column;
@@ -103,53 +122,67 @@ export default function MasterBus() {
         box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
       "
     >
-      {/* Header */}
+      {/* Compact Header */}
       <div 
         style="
-          height: 3rem;
-          padding: 0 1rem;
-          background-color: var(--color-bg-surface);
-          border-bottom: 1px solid var(--color-border-primary);
+          height: 2.5rem;
+          padding: 0 0.75rem;
+          background-color: var(--color-accent-primary);
+          color: var(--color-text-on-accent);
           display: flex;
           align-items: center;
           justify-content: space-between;
+          font-size: 0.875rem;
+          font-weight: 600;
         "
       >
-        <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--color-text-primary);">
-          <i class="fa-solid fa-sliders" style="margin-right: 0.5rem; color: var(--color-accent-primary);"></i>
-          Master Bus
-        </h3>
+        <span>MASTER</span>
         <button
           onClick={store.toggleMasterBus}
-          class="btn btn-secondary"
           style="
-            width: 1.5rem;
-            height: 1.5rem;
+            width: 1.25rem;
+            height: 1.25rem;
             padding: 0;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--color-text-on-accent);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
           "
-          title="Close Master Bus"
+          title="Close Master"
         >
-          <i class="fa-solid fa-times"></i>
+          ×
         </button>
       </div>
 
-      {/* Master Volume */}
+      {/* Master Level Control */}
       <div 
         style="
-          padding: 1rem;
+          padding: 0.75rem;
+          background-color: var(--color-bg-secondary);
           border-bottom: 1px solid var(--color-border-primary);
-          background-color: var(--color-bg-surface);
         "
       >
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <i class="fa-solid fa-volume-high" style="color: var(--color-accent-primary);"></i>
-          <span style="font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary);">Master Volume</span>
-        </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="
+            width: 2rem;
+            height: 1.5rem;
+            background-color: var(--color-bg-surface);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+          ">
+            LVL
+          </div>
           <input
             type="range"
             min="0"
@@ -157,34 +190,32 @@ export default function MasterBus() {
             step="0.01"
             value={store.masterVolume || 0.8}
             onChange={(e) => store.setMasterVolume(parseFloat(e.target.value))}
-            style="flex: 1; accent-color: var(--color-accent-primary);"
+            style="
+              flex: 1;
+              height: 1.5rem;
+              accent-color: var(--color-accent-primary);
+            "
           />
-          <span style="
-            font-size: 0.75rem; 
-            color: var(--color-text-secondary);
-            min-width: 2.5rem;
+          <div style="
+            min-width: 2rem;
             text-align: right;
+            font-size: 0.7rem;
+            color: var(--color-text-secondary);
             font-family: monospace;
           ">
-            {Math.round((store.masterVolume || 0.8) * 100)}%
-          </span>
+            {Math.round((store.masterVolume || 0.8) * 100)}
+          </div>
         </div>
       </div>
 
-      {/* Effects Stack */}
-      <div style="
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-        background-color: var(--color-bg-primary);
-      ">
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-          <i class="fa-solid fa-magic" style="color: var(--color-accent-primary);"></i>
-          <span style="font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary);">Effects Stack</span>
-        </div>
-
-        {/* Add Effect Button */}
-        <div style="margin-bottom: 1rem;">
+      {/* Effects Stack - Compact Design */}
+      <div style="flex: 1; overflow-y: auto;">
+        {/* Add Effect Control */}
+        <div style="
+          padding: 0.75rem;
+          background-color: var(--color-bg-secondary);
+          border-bottom: 1px solid var(--color-border-primary);
+        ">
           <select
             onChange={(e) => {
               if (e.target.value) {
@@ -194,15 +225,16 @@ export default function MasterBus() {
             }}
             style="
               width: 100%;
-              padding: 0.5rem;
+              height: 1.75rem;
+              padding: 0 0.5rem;
               border: 1px solid var(--color-border-primary);
               border-radius: var(--radius-sm);
               background-color: var(--color-bg-surface);
               color: var(--color-text-primary);
-              font-size: 0.875rem;
+              font-size: 0.75rem;
             "
           >
-            <option value="">+ Add Effect</option>
+            <option value="">+ Add FX</option>
             <For each={effectTypes}>
               {(effectType) => (
                 <option value={effectType}>{effectType}</option>
@@ -211,9 +243,9 @@ export default function MasterBus() {
           </select>
         </div>
 
-        {/* Effects List */}
-        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-          <For each={masterEffects}>
+        {/* Effects List - Compact Stack Style */}
+        <div style="padding: 0.5rem;">
+          <For each={masterEffects()}>
             {(effect, index) => (
               <div
                 draggable={true}
@@ -225,60 +257,88 @@ export default function MasterBus() {
                   background-color: var(--color-bg-surface);
                   border: 1px solid var(--color-border-primary);
                   border-radius: var(--radius-sm);
-                  padding: 0.75rem;
+                  margin-bottom: 0.5rem;
                   cursor: move;
-                  transition: all 0.2s ease;
-                  ${dragOverIndex() === index() ? 'transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);' : ''}
+                  transition: all 0.15s ease;
+                  ${dragOverIndex() === index() ? 'transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);' : ''}
                 `}
               >
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fa-solid fa-grip-vertical" style="color: var(--color-text-muted); font-size: 0.75rem;"></i>
-                    <span style="font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary);">
+                {/* Effect Header - Compact */}
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 0.5rem 0.75rem;
+                  background-color: var(--color-bg-secondary);
+                  border-bottom: 1px solid var(--color-border-primary);
+                ">
+                  <div style="display: flex; align-items: center; gap: 0.25rem;">
+                    <div style="
+                      width: 4px;
+                      height: 12px;
+                      background: repeating-linear-gradient(
+                        to bottom,
+                        var(--color-text-muted) 0px,
+                        var(--color-text-muted) 1px,
+                        transparent 1px,
+                        transparent 3px
+                      );
+                    "></div>
+                    <span style="
+                      font-size: 0.75rem;
+                      font-weight: 500;
+                      color: var(--color-text-primary);
+                    ">
                       {effect.type}
                     </span>
                   </div>
                   <button
                     onClick={() => removeMasterEffect(effect.id)}
                     style="
-                      width: 1.5rem;
-                      height: 1.5rem;
+                      width: 1.25rem;
+                      height: 1.25rem;
                       padding: 0;
                       border: none;
-                      background-color: var(--color-bg-secondary);
+                      background-color: transparent;
                       color: var(--color-text-muted);
-                      border-radius: var(--radius-sm);
                       cursor: pointer;
                       display: flex;
                       align-items: center;
                       justify-content: center;
-                      font-size: 0.75rem;
+                      font-size: 0.7rem;
+                      border-radius: var(--radius-sm);
                     "
-                    title="Remove Effect"
+                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-bg-primary)'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    title="Remove"
                   >
-                    <i class="fa-solid fa-times"></i>
+                    ×
                   </button>
                 </div>
-                <EffectControls
-                  effect={effect}
-                  trackId="master"
-                  updateEffect={updateMasterEffect}
-                />
+                
+                {/* Effect Controls - Compact */}
+                <div style="padding: 0.75rem;">
+                  <EffectControls
+                    effect={effect}
+                    trackId="master"
+                    updateEffect={updateMasterEffectWrapper}
+                  />
+                </div>
               </div>
             )}
           </For>
         </div>
 
-        <Show when={masterEffects.length === 0}>
+        {/* Empty State - Compact */}
+        <Show when={masterEffects().length === 0}>
           <div style="
             text-align: center;
             padding: 2rem 1rem;
             color: var(--color-text-muted);
-            font-size: 0.875rem;
+            font-size: 0.8rem;
           ">
-            <i class="fa-solid fa-magic" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-            <p>No effects added yet</p>
-            <p style="font-size: 0.75rem;">Add effects to shape your master sound</p>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.3;">🎛️</div>
+            <div>No effects</div>
           </div>
         </Show>
       </div>

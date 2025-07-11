@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Context Menu - Note Properties</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-note {
+            background-color: #007aff;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            cursor: pointer;
+            display: inline-block;
+            position: relative;
+            user-select: none;
+        }
+        .test-note:hover {
+            background-color: #0056b3;
+        }
+        .context-menu {
+            position: fixed;
+            background-color: #2a2a2a;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            min-width: 120px;
+            z-index: 1000;
+            padding: 4px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .context-menu-item {
+            display: block;
+            padding: 8px 12px;
+            color: #ffffff;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .context-menu-item:hover {
+            background-color: #3a3a3a;
+        }
+        .context-menu-item.danger {
+            color: #ff4444;
+        }
+        .context-menu-divider {
+            height: 1px;
+            background-color: #4b5563;
+            margin: 4px 0;
+        }
+        .instructions {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .icon {
+            margin-right: 8px;
+        }
+        .status {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test Context Menu - Note Properties</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <p>Right-click on any of the test notes below to see the context menu with the "Properties" option.</p>
+            <p>This simulates the piano roll note context menu functionality.</p>
+        </div>
+
+        <div class="test-note" data-note="C4" data-index="0">
+            🎵 C4 - Quarter Note
+        </div>
+        <div class="test-note" data-note="E4" data-index="1">
+            🎵 E4 - Half Note
+        </div>
+        <div class="test-note" data-note="G4" data-index="2">
+            🎵 G4 - Eighth Note
+        </div>
+        <div class="test-note" data-note="C5" data-index="3">
+            🎵 C5 - Whole Note
+        </div>
+
+        <div class="status" id="status">
+            Context menu item clicked!
+        </div>
+    </div>
+
+    <script>
+        let contextMenu = null;
+
+        // Create context menu
+        function createContextMenu() {
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.innerHTML = `
+                <a href="#" class="context-menu-item" data-action="copy">
+                    <span class="icon">📋</span>Copy
+                </a>
+                <a href="#" class="context-menu-item" data-action="duplicate">
+                    <span class="icon">📑</span>Duplicate
+                </a>
+                <div class="context-menu-divider"></div>
+                <a href="#" class="context-menu-item" data-action="properties">
+                    <span class="icon">⚙️</span>Properties
+                </a>
+                <div class="context-menu-divider"></div>
+                <a href="#" class="context-menu-item danger" data-action="delete">
+                    <span class="icon">🗑️</span>Delete
+                </a>
+            `;
+            return menu;
+        }
+
+        // Show context menu
+        function showContextMenu(x, y, note, index) {
+            hideContextMenu();
+            
+            contextMenu = createContextMenu();
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            
+            // Add event listeners
+            contextMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = e.target.closest('.context-menu-item')?.dataset.action;
+                if (action) {
+                    handleContextMenuClick(action, note, index);
+                }
+            });
+            
+            document.body.appendChild(contextMenu);
+        }
+
+        // Hide context menu
+        function hideContextMenu() {
+            if (contextMenu) {
+                contextMenu.remove();
+                contextMenu = null;
+            }
+        }
+
+        // Handle context menu clicks
+        function handleContextMenuClick(action, note, index) {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            
+            switch (action) {
+                case 'copy':
+                    status.textContent = `Copied note: ${note}`;
+                    break;
+                case 'duplicate':
+                    status.textContent = `Duplicated note: ${note}`;
+                    break;
+                case 'properties':
+                    status.textContent = `Opening Properties dialog for note: ${note}`;
+                    status.style.backgroundColor = '#007aff';
+                    break;
+                case 'delete':
+                    status.textContent = `Deleted note: ${note}`;
+                    status.style.backgroundColor = '#ff4444';
+                    break;
+            }
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+                status.style.backgroundColor = '#28a745';
+            }, 3000);
+            
+            hideContextMenu();
+        }
+
+        // Add event listeners to test notes
+        document.querySelectorAll('.test-note').forEach(note => {
+            note.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const noteData = note.dataset.note;
+                const noteIndex = note.dataset.index;
+                showContextMenu(e.clientX, e.clientY, noteData, noteIndex);
+            });
+        });
+
+        // Hide context menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) {
+                hideContextMenu();
+            }
+        });
+
+        // Hide context menu on scroll
+        document.addEventListener('scroll', hideContextMenu);
+    </script>
+</body>
+</html>

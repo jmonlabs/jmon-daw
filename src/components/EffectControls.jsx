@@ -181,6 +181,177 @@ export default function EffectControls(props) {
           </>
         );
 
+      case 'Chorus':
+        return (
+          <>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.wet || 0.5}
+                onChange={(e) => handleParamChange('wet', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.5) * 100)}</span>
+            </div>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Rate</span>
+              <input
+                type="range"
+                min="0.1"
+                max="20"
+                step="0.1"
+                value={effect.options.frequency || 4}
+                onChange={(e) => handleParamChange('frequency', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{(effect.options.frequency || 4).toFixed(1)}</span>
+            </div>
+          </>
+        );
+
+      case 'Phaser':
+        return (
+          <>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.wet || 0.5}
+                onChange={(e) => handleParamChange('wet', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.5) * 100)}</span>
+            </div>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Rate</span>
+              <input
+                type="range"
+                min="0.1"
+                max="20"
+                step="0.1"
+                value={effect.options.frequency || 4}
+                onChange={(e) => handleParamChange('frequency', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{(effect.options.frequency || 4).toFixed(1)}</span>
+            </div>
+          </>
+        );
+
+      case 'Tremolo':
+        return (
+          <>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Depth</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.depth || 0.5}
+                onChange={(e) => handleParamChange('depth', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.depth || 0.5) * 100)}</span>
+            </div>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Rate</span>
+              <input
+                type="range"
+                min="0.1"
+                max="20"
+                step="0.1"
+                value={effect.options.frequency || 4}
+                onChange={(e) => handleParamChange('frequency', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{(effect.options.frequency || 4).toFixed(1)}</span>
+            </div>
+          </>
+        );
+
+      case 'BitCrusher':
+        return (
+          <>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.wet || 0.5}
+                onChange={(e) => handleParamChange('wet', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.5) * 100)}</span>
+            </div>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Bits</span>
+              <input
+                type="range"
+                min="1"
+                max="16"
+                step="1"
+                value={effect.options.bits || 4}
+                onChange={(e) => handleParamChange('bits', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{effect.options.bits || 4}</span>
+            </div>
+          </>
+        );
+
+      case 'JCReverb':
+      case 'Freeverb':
+        return (
+          <>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Wet</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.wet || 0.3}
+                onChange={(e) => handleParamChange('wet', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.wet || 0.3) * 100)}</span>
+            </div>
+            <div class="is-flex is-justify-content-space-between is-align-items-center">
+              <span class="is-size-7" style="color: var(--text-muted);">Room</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={effect.options.roomSize || 0.7}
+                onChange={(e) => handleParamChange('roomSize', e.target.value)}
+                class="slider mr-2"
+                style="width: 4rem; accent-color: var(--primary-accent);"
+              />
+              <span class="is-size-7" style="min-width: 2rem; text-align: right; color: var(--text-primary);">{Math.round((effect.options.roomSize || 0.7) * 100)}</span>
+            </div>
+          </>
+        );
+
       default:
         return (
           <div class="is-flex is-justify-content-space-between is-align-items-center">

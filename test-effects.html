@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Effects Test - JMON DAW</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success { background: #22c55e20; border: 1px solid #22c55e; }
+        .error { background: #ef444420; border: 1px solid #ef4444; }
+        .warning { background: #eab30820; border: 1px solid #eab308; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .effect-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .effect-card {
+            background: #333;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #555;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.pass { background: #22c55e; color: #000; }
+        .status.fail { background: #ef4444; color: #fff; }
+        .status.partial { background: #eab308; color: #000; }
+    </style>
+</head>
+<body>
+    <h1>🎛️ JMON DAW Effects Testing Suite</h1>
+    
+    <div class="test-section">
+        <h2>🚀 Initialize Test Environment</h2>
+        <button onclick="initializeTest()">Initialize DAW & Audio Engine</button>
+        <div id="init-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Effect Support Matrix</h2>
+        <p>Testing all effects for creation, parameter access, and audio functionality:</p>
+        <div id="effect-matrix"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎵 Track Effects Tests</h2>
+        <button onclick="testTrackEffects()">Test Track Effects</button>
+        <div id="track-effects-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎛️ Master Effects Tests</h2>
+        <button onclick="testMasterEffects()">Test Master Effects</button>
+        <div id="master-effects-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 Parameter Update Tests</h2>
+        <button onclick="testParameterUpdates()">Test Real-time Parameter Updates</button>
+        <div id="parameter-tests-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Audio Routing Tests</h2>
+        <button onclick="testAudioRouting()">Test Audio Signal Chain</button>
+        <div id="routing-tests-results"></div>
+    </div>
+
+    <script type="module">
+        // List of all supported effects
+        const allEffectTypes = [
+            'Reverb', 'JCReverb', 'Freeverb',
+            'Delay', 'FeedbackDelay', 'PingPongDelay',
+            'Chorus', 'Phaser', 'Tremolo', 'Vibrato',
+            'Filter', 'AutoFilter', 'AutoWah',
+            'Distortion', 'Chebyshev', 'BitCrusher',
+            'Compressor', 'Limiter', 'Gate',
+            'StereoWidener', 'MidSideCompressor',
+            'PitchShift', 'FrequencyShifter'
+        ];
+
+        let dawStore, audioEngine;
+        let testResults = {};
+
+        window.initializeTest = async function() {
+            const statusDiv = document.getElementById('init-status');
+            statusDiv.innerHTML = '<div class="warning">Initializing...</div>';
+
+            try {
+                // Wait for the DAW to load
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Get references to DAW store and audio engine
+                dawStore = window.dawStore;
+                audioEngine = window.audioEngine;
+
+                if (!dawStore || !audioEngine) {
+                    throw new Error('DAW store or audio engine not found. Please open the DAW first.');
+                }
+
+                // Initialize audio context if needed
+                if (!audioEngine.isInitialized) {
+                    await audioEngine.init();
+                }
+
+                statusDiv.innerHTML = `
+                    <div class="success">✅ DAW Store: Available</div>
+                    <div class="success">✅ Audio Engine: ${audioEngine.isInitialized ? 'Initialized' : 'Not Initialized'}</div>
+                    <div class="success">✅ Tracks: ${dawStore.tracks.length}</div>
+                    <div class="success">✅ Audio Context: ${audioEngine.context?.state || 'Unknown'}</div>
+                `;
+
+                // Generate effect support matrix
+                generateEffectMatrix();
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        };
+
+        function generateEffectMatrix() {
+            const matrixDiv = document.getElementById('effect-matrix');
+            let html = '<div class="effect-list">';
+
+            allEffectTypes.forEach(effectType => {
+                const testResult = testEffectCreation(effectType);
+                const statusClass = testResult.canCreate ? 'pass' : 'fail';
+                
+                html += `
+                    <div class="effect-card">
+                        <strong>${effectType}</strong>
+                        <span class="status ${statusClass}">${testResult.canCreate ? 'SUPPORTED' : 'FAILED'}</span>
+                        <div style="font-size: 12px; margin-top: 5px;">
+                            Create: ${testResult.canCreate ? '✅' : '❌'}<br>
+                            Parameters: ${testResult.parameterCount}<br>
+                            ${testResult.error ? `Error: ${testResult.error}` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            matrixDiv.innerHTML = html;
+        }
+
+        function testEffectCreation(effectType) {
+            try {
+                // Test effect creation using the same method as the audio engine
+                const testNode = audioEngine.createAudioNode({
+                    id: `test_${effectType.toLowerCase()}`,
+                    type: effectType,
+                    options: getDefaultOptions(effectType)
+                });
+
+                if (!testNode) {
+                    return { canCreate: false, error: 'createAudioNode returned null', parameterCount: 0 };
+                }
+
+                // Count available parameters
+                const parameterCount = countEffectParameters(testNode);
+
+                // Clean up test node
+                if (testNode.dispose) {
+                    testNode.dispose();
+                }
+
+                return { canCreate: true, parameterCount, error: null };
+
+            } catch (error) {
+                return { canCreate: false, error: error.message, parameterCount: 0 };
+            }
+        }
+
+        function getDefaultOptions(effectType) {
+            // Default options for each effect type
+            const defaults = {
+                'Reverb': { wet: 0.3, roomSize: 0.7, dampening: 0.3 },
+                'JCReverb': { wet: 0.3, roomSize: 0.7 },
+                'Freeverb': { wet: 0.3, roomSize: 0.7, dampening: 0.3 },
+                'Delay': { delayTime: '8n', feedback: 0.4, wet: 0.3 },
+                'FeedbackDelay': { delayTime: '8n', feedback: 0.4, wet: 0.3 },
+                'PingPongDelay': { delayTime: '8n', feedback: 0.4, wet: 0.3 },
+                'Chorus': { frequency: 4, delayTime: 3.5, depth: 0.7, wet: 0.5 },
+                'Phaser': { frequency: 4, octaves: 3, baseFrequency: 350, wet: 0.5 },
+                'Tremolo': { frequency: 4, depth: 0.5, wet: 1 },
+                'Vibrato': { frequency: 4, depth: 0.1, wet: 1 },
+                'Filter': { frequency: 1000, type: 'lowpass', Q: 1 },
+                'AutoFilter': { frequency: 1000, depth: 0.5, baseFrequency: 100 },
+                'AutoWah': { baseFrequency: 100, octaves: 6, wet: 1 },
+                'Distortion': { distortion: 0.4, wet: 0.5 },
+                'Chebyshev': { order: 50, wet: 0.5 },
+                'BitCrusher': { bits: 4, wet: 0.5 },
+                'Compressor': { threshold: -24, ratio: 4, attack: 0.003, release: 0.1 },
+                'Limiter': { threshold: -12 },
+                'Gate': { threshold: -40, ratio: 10, attack: 0.003, release: 0.1 },
+                'StereoWidener': { width: 0.5 },
+                'MidSideCompressor': {},
+                'PitchShift': { pitch: 0, wet: 0.5 },
+                'FrequencyShifter': { frequency: 42 }
+            };
+            return defaults[effectType] || {};
+        }
+
+        function countEffectParameters(node) {
+            let count = 0;
+            for (let prop in node) {
+                if (node[prop] && typeof node[prop] === 'object' && 'value' in node[prop]) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        window.testTrackEffects = async function() {
+            const resultsDiv = document.getElementById('track-effects-results');
+            resultsDiv.innerHTML = '<div class="warning">Testing track effects...</div>';
+            
+            const results = [];
+            
+            try {
+                // Ensure we have at least one track
+                if (dawStore.tracks.length === 0) {
+                    dawStore.addTrack();
+                }
+                
+                const trackId = dawStore.tracks[0].id;
+                const testEffects = ['Reverb', 'Delay', 'Filter', 'Distortion', 'Compressor'];
+                
+                for (const effectType of testEffects) {
+                    const result = await testTrackEffect(trackId, effectType);
+                    results.push(result);
+                }
+                
+                displayResults(resultsDiv, results);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Track effects test failed: ${error.message}</div>`;
+            }
+        };
+
+        window.testMasterEffects = async function() {
+            const resultsDiv = document.getElementById('master-effects-results');
+            resultsDiv.innerHTML = '<div class="warning">Testing master effects...</div>';
+            
+            const results = [];
+            
+            try {
+                const testEffects = ['Reverb', 'Delay', 'Filter', 'Distortion', 'Compressor'];
+                
+                for (const effectType of testEffects) {
+                    const result = await testMasterEffect(effectType);
+                    results.push(result);
+                }
+                
+                displayResults(resultsDiv, results);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Master effects test failed: ${error.message}</div>`;
+            }
+        };
+
+        async function testTrackEffect(trackId, effectType) {
+            try {
+                // Get initial track effects
+                const track = dawStore.tracks.find(t => t.id === trackId);
+                const initialEffectsCount = track.effects?.length || 0;
+                
+                // Add effect to track
+                const effectId = `track_effect_${Date.now()}`;
+                const newEffect = {
+                    id: effectId,
+                    type: effectType,
+                    options: getDefaultOptions(effectType)
+                };
+                
+                const updatedEffects = [...(track.effects || []), newEffect];
+                dawStore.updateTrack(trackId, { effects: updatedEffects });
+                
+                // Wait for audio graph rebuild
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Check if effect was created in audio engine
+                const audioEffectId = `track_0_effect_${initialEffectsCount}`;
+                const audioEffect = audioEngine.audioGraph.get(audioEffectId);
+                
+                return {
+                    effectType,
+                    context: 'track',
+                    success: !!audioEffect,
+                    audioEffectId,
+                    message: audioEffect ? 'Effect created and found in audio graph' : 'Effect not found in audio graph'
+                };
+                
+            } catch (error) {
+                return {
+                    effectType,
+                    context: 'track',
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function testMasterEffect(effectType) {
+            try {
+                // Get initial master effects
+                const initialEffects = dawStore.masterBusEffects || [];
+                
+                // Add effect to master
+                const effectId = `master_effect_${Date.now()}`;
+                const newEffect = {
+                    id: effectId,
+                    type: effectType,
+                    options: getDefaultOptions(effectType)
+                };
+                
+                const updatedEffects = [...initialEffects, newEffect];
+                dawStore.setMasterBusEffects(updatedEffects);
+                
+                // Wait for master effects to be set
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Check if effect was created in audio engine
+                const audioEffectId = `master_effect_${initialEffects.length}`;
+                const audioEffect = audioEngine.audioGraph.get(audioEffectId);
+                
+                return {
+                    effectType,
+                    context: 'master',
+                    success: !!audioEffect,
+                    audioEffectId,
+                    message: audioEffect ? 'Effect created and found in audio graph' : 'Effect not found in audio graph'
+                };
+                
+            } catch (error) {
+                return {
+                    effectType,
+                    context: 'master',
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        window.testParameterUpdates = async function() {
+            const resultsDiv = document.getElementById('parameter-tests-results');
+            resultsDiv.innerHTML = '<div class="warning">Testing parameter updates...</div>';
+            
+            const results = [];
+            
+            try {
+                // Test track effect parameter updates
+                const trackResults = await testTrackParameterUpdates();
+                results.push(...trackResults);
+                
+                // Test master effect parameter updates  
+                const masterResults = await testMasterParameterUpdates();
+                results.push(...masterResults);
+                
+                displayResults(resultsDiv, results);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Parameter update tests failed: ${error.message}</div>`;
+            }
+        };
+
+        async function testTrackParameterUpdates() {
+            // Test updating parameters on existing track effects
+            const results = [];
+            const track = dawStore.tracks[0];
+            
+            if (track && track.effects && track.effects.length > 0) {
+                const effect = track.effects[0];
+                const audioEffectId = `track_0_effect_0`;
+                const audioEffect = audioEngine.audioGraph.get(audioEffectId);
+                
+                if (audioEffect) {
+                    // Test parameter update
+                    const testParam = 'wet';
+                    const testValue = 0.7;
+                    
+                    audioEngine.updateEffectParameter(audioEffectId, testParam, testValue);
+                    
+                    // Check if parameter was updated
+                    const updatedValue = audioEffect[testParam]?.value || audioEffect[testParam];
+                    
+                    results.push({
+                        effectType: effect.type,
+                        context: 'track parameter',
+                        success: Math.abs(updatedValue - testValue) < 0.01,
+                        message: `Parameter ${testParam}: expected ${testValue}, got ${updatedValue}`
+                    });
+                }
+            }
+            
+            return results;
+        }
+
+        async function testMasterParameterUpdates() {
+            // Test updating parameters on existing master effects
+            const results = [];
+            const masterEffects = dawStore.masterBusEffects || [];
+            
+            if (masterEffects.length > 0) {
+                const effect = masterEffects[0];
+                const audioEffectId = `master_effect_0`;
+                const audioEffect = audioEngine.audioGraph.get(audioEffectId);
+                
+                if (audioEffect) {
+                    // Test parameter update
+                    const testParam = 'wet';
+                    const testValue = 0.8;
+                    
+                    audioEngine.updateEffectParameter(audioEffectId, testParam, testValue);
+                    
+                    // Check if parameter was updated
+                    const updatedValue = audioEffect[testParam]?.value || audioEffect[testParam];
+                    
+                    results.push({
+                        effectType: effect.type,
+                        context: 'master parameter',
+                        success: Math.abs(updatedValue - testValue) < 0.01,
+                        message: `Parameter ${testParam}: expected ${testValue}, got ${updatedValue}`
+                    });
+                }
+            }
+            
+            return results;
+        }
+
+        window.testAudioRouting = async function() {
+            const resultsDiv = document.getElementById('routing-tests-results');
+            resultsDiv.innerHTML = '<div class="warning">Testing audio routing...</div>';
+            
+            const results = [];
+            
+            try {
+                // Test master destination
+                const masterDest = audioEngine.audioGraph.get('master');
+                results.push({
+                    effectType: 'Master Destination',
+                    context: 'routing',
+                    success: !!masterDest,
+                    message: masterDest ? `Master destination: ${masterDest.constructor.name}` : 'Master destination not found'
+                });
+                
+                // Test track connections
+                const tracks = dawStore.tracks;
+                for (let i = 0; i < tracks.length; i++) {
+                    const synthNode = audioEngine.synths.get(`track_${i}`);
+                    results.push({
+                        effectType: `Track ${i} Synth`,
+                        context: 'routing',
+                        success: !!synthNode,
+                        message: synthNode ? `Synth: ${synthNode.constructor.name}` : 'Synth not found'
+                    });
+                }
+                
+                displayResults(resultsDiv, results);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Audio routing tests failed: ${error.message}</div>`;
+            }
+        };
+
+        function displayResults(container, results) {
+            let html = '';
+            
+            const passed = results.filter(r => r.success).length;
+            const total = results.length;
+            
+            html += `<div class="test-result ${passed === total ? 'success' : 'warning'}">
+                Summary: ${passed}/${total} tests passed
+            </div>`;
+            
+            results.forEach(result => {
+                const statusClass = result.success ? 'success' : 'error';
+                html += `
+                    <div class="test-result ${statusClass}">
+                        <strong>${result.effectType}</strong> (${result.context}): 
+                        ${result.success ? '✅' : '❌'} ${result.message || result.error || ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Auto-initialize when page loads if DAW is available
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.dawStore && window.audioEngine) {
+                    initializeTest();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

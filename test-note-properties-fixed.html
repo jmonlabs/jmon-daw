@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Note Properties - Context Menu Fixed</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .success-message {
+            background-color: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #20c997;
+        }
+        .code-change {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #007aff;
+        }
+        .code-change h4 {
+            color: #007aff;
+            margin-top: 0;
+        }
+        .code-change pre {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .implementation-list {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .implementation-list h3 {
+            color: #20c997;
+            margin-top: 0;
+        }
+        .implementation-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .implementation-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .implementation-list li:last-child {
+            border-bottom: none;
+        }
+        .check-mark {
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 10px 5px;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .button.success {
+            background-color: #28a745;
+        }
+        .button.success:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="success-message">
+            <h2>✅ Problème résolu : Menu contextuel "Properties" ajouté avec succès!</h2>
+            <p>Le menu contextuel des notes du piano roll contient maintenant l'item "Properties" qui ouvre un dialogue complet d'édition des propriétés de note.</p>
+        </div>
+
+        <div class="code-change">
+            <h4>🔧 Correction principale - Layout.jsx</h4>
+            <p>Le vrai menu contextuel était dans <code>Layout.jsx</code>, pas dans <code>TrackEditor.jsx</code>. J'ai ajouté l'item "Properties" :</p>
+            <pre><code>&lt;a class="dropdown-item has-text-light" 
+   onClick={() => {
+     const trackIndex = store.tracks.findIndex(t => t.id === store.contextMenu.trackId);
+     if (trackIndex !== -1) {
+       const note = store.tracks[trackIndex].notes[store.contextMenu.noteIndex];
+       store.setEditingNote(note);
+       store.setEditingNoteIndex(store.contextMenu.noteIndex);
+       store.setEditingTrackId(store.contextMenu.trackId);
+       store.setShowNoteProperties(true);
+     }
+     store.setContextMenu(null);
+   }}&gt;
+   &lt;i class="fa-solid fa-cog"&gt;&lt;/i&gt; Properties
+&lt;/a&gt;</code></pre>
+        </div>
+
+        <div class="code-change">
+            <h4>🏪 Ajouts au Store - dawStore.js</h4>
+            <p>Nouveaux signaux et méthodes pour gérer le dialogue des propriétés :</p>
+            <pre><code>const [showNoteProperties, setShowNoteProperties] = createSignal(false);
+const [editingNote, setEditingNote] = createSignal(null);
+const [editingNoteIndex, setEditingNoteIndex] = createSignal(-1);
+const [editingTrackId, setEditingTrackId] = createSignal(null);
+
+// Méthodes d'accès et manipulation
+setEditingNote, setEditingNoteIndex, setEditingTrackId, 
+setShowNoteProperties, saveNoteProperties</code></pre>
+        </div>
+
+        <div class="code-change">
+            <h4>🎨 Intégration Layout - Layout.jsx</h4>
+            <p>Ajout du composant NoteProperties à la fin du Layout :</p>
+            <pre><code>&lt;NoteProperties
+  note={store.editingNote}
+  isOpen={() => store.showNoteProperties}
+  onClose={() => store.setShowNoteProperties(false)}
+  onSave={store.saveNoteProperties}
+  trackId={store.editingTrackId}
+/&gt;</code></pre>
+        </div>
+
+        <div class="implementation-list">
+            <h3>📋 Fonctionnalités implémentées</h3>
+            <ul>
+                <li><span class="check-mark">✅</span><strong>Menu contextuel complet:</strong> Copier, Couper, Coller, Dupliquer, Properties, Supprimer</li>
+                <li><span class="check-mark">✅</span><strong>Dialogue Properties:</strong> Interface complète avec 9 effets note-spécifiques</li>
+                <li><span class="check-mark">✅</span><strong>Gestion d'état:</strong> Store centralisé avec signaux réactifs</li>
+                <li><span class="check-mark">✅</span><strong>Sauvegarde automatique:</strong> Modifications appliquées aux notes du track</li>
+                <li><span class="check-mark">✅</span><strong>Effets note-spécifiques:</strong> Pitch Bend, Detune, Pan, Reverb, Delay, Chorus, Distortion, Filter, Release</li>
+                <li><span class="check-mark">✅</span><strong>Validation:</strong> Pas d'erreurs de compilation</li>
+                <li><span class="check-mark">✅</span><strong>Z-index correct:</strong> Dialogue s'affiche au-dessus des autres éléments</li>
+            </ul>
+        </div>
+
+        <div class="code-change">
+            <h4>🎯 Comment tester</h4>
+            <p>Dans le DAW:</p>
+            <ol>
+                <li>Créez ou ouvrez une track avec des notes</li>
+                <li>Faites un <strong>clic droit</strong> sur une note dans le piano roll</li>
+                <li>Sélectionnez <strong>"Properties"</strong> dans le menu contextuel</li>
+                <li>Le dialogue s'ouvre avec tous les paramètres de la note</li>
+                <li>Modifiez les propriétés et sauvegardez</li>
+                <li>Les changements sont appliqués à la note</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <button class="button success" onclick="window.location.href='index.html'">
+                🚀 Tester dans le DAW
+            </button>
+            <button class="button" onclick="window.location.href='test-note-properties.html'">
+                📋 Voir les détails des propriétés
+            </button>
+        </div>
+    </div>
+</body>
+</html>
