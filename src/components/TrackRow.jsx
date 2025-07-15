@@ -1,7 +1,6 @@
-import { Show, For, createEffect, createSignal } from "solid-js";
+import { Show, For, createEffect, createSignal, onCleanup } from "solid-js";
 import { useDawStore } from "../stores/dawStore";
 import TrackLane from "./TrackLane";
-import ModulationTimeline from "./ModulationTimeline";
 
 // Auto-zoom utility function
 const calculateOptimalZoom = (track) => {
@@ -96,16 +95,6 @@ export default function TrackRow(props) {
 
   let trackLaneSectionRef;
   
-  // State for automation visibility with debouncing
-  const [showAutomation, setShowAutomation] = createSignal(false);
-  let automationTimeout;
-  
-  // Use stored automation visibility state instead of height-based detection
-  createEffect(() => {
-    const visible = track.automation?.visible || false;
-    setShowAutomation(visible);
-  });
-
   // Force synchronization of scroll when store.timelineScroll changes
   createEffect(() => {
     const currentScroll = store.timelineScroll;
@@ -981,39 +970,6 @@ export default function TrackRow(props) {
       </Show>
       </div>
 
-      {/* Modulation Timeline - Separate container to prevent layout bouncing */}
-      <div 
-        style={`
-          height: ${showAutomation() ? '200px' : '0px'};
-          transition: height 0.3s ease;
-          overflow: hidden;
-          border-top: ${showAutomation() ? '1px solid var(--border-color)' : 'none'};
-          flex-shrink: 0;
-          position: relative;
-          z-index: 1;
-        `}
-      >
-        <Show when={showAutomation()}>
-          <div style="
-            height: 200px; 
-            overflow-y: auto;
-            overflow-x: auto;
-            position: relative;
-          ">
-            <ModulationTimeline 
-              trackId={track.id}
-              trackLength={Math.max(4, Math.ceil((track.notes || []).reduce((max, note) => {
-                const noteTime = typeof note.time === 'string' ? 
-                  parseFloat(note.time.split(':')[0]) || 0 : 
-                  note.time || 0;
-                return Math.max(max, noteTime + 1);
-              }, 4)))}
-              beatWidth={beatWidth}
-              timelineScroll={timelineScroll}
-            />
-          </div>
-        </Show>
-      </div>
     </div>
   );
 }

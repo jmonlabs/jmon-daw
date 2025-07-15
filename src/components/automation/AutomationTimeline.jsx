@@ -16,15 +16,19 @@ const AutomationTimeline = (props) => {
   const timelineWidth = Math.max(800, trackLength * beatWidth * 4);
 
   return (
-    <div class="channel-timeline">
+    <div 
+      class="channel-timeline"
+      style="height: 80px; position: relative; background: #f8f9fa; border-radius: 4px; overflow: hidden;"
+    >
       <div 
         class="timeline-scroll-container"
-        style={`transform: translateX(-${timelineScroll}px)`}
+        style={`transform: translateX(-${timelineScroll}px); height: 100%;`}
       >
         <svg
           width={timelineWidth}
           height={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT}
           class="timeline-svg"
+          style="cursor: crosshair; display: block;"
           onClick={(e) => onTimelineClick?.(e, channel)}
         >
           {/* Clean grid background */}
@@ -97,9 +101,21 @@ const AutomationTimeline = (props) => {
                 cx={timeToX(point.time, beatWidth)}
                 cy={valueToY(point.value, channel.range, AUTOMATION_CONSTANTS.CHANNEL_HEIGHT)}
                 r={AUTOMATION_CONSTANTS.CONTROL_POINT_RADIUS}
+                fill="#007bff"
+                stroke="#ffffff"
+                stroke-width="2"
                 class="control-point"
+                style="cursor: move; transition: all 0.1s ease;"
                 onMouseDown={(e) => onPointMouseDown?.(e, channel, index())}
                 onContextMenu={(e) => onPointRightClick?.(e, channel, index())}
+                onMouseEnter={(e) => {
+                  e.target.setAttribute('r', '6');
+                  e.target.setAttribute('fill', '#0056b3');
+                }}
+                onMouseLeave={(e) => {
+                  e.target.setAttribute('r', '4');
+                  e.target.setAttribute('fill', '#007bff');
+                }}
               />
             )}
           </For>

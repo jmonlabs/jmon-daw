@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Automation - JMON DAW</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🎛️ JMON DAW - Automation Test</h1>
+    
+    <div class="test-section">
+        <h2>Instructions de test</h2>
+        <ol>
+            <li>Ouvrir le DAW principal</li>
+            <li>Charger une track (bouton "Load Demo" ou créer une track)</li>
+            <li>Cliquer sur le bouton <strong>"A"</strong> d'une track pour afficher l'automation</li>
+            <li>Tester les fonctionnalités suivantes :</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Tests à effectuer</h2>
+        
+        <div class="test-result info">
+            <strong>Test 1 : Affichage de l'automation</strong><br>
+            ✓ Le bouton "A" active/désactive la zone d'automation<br>
+            ✓ La zone d'automation apparaît sous la track<br>
+            ✓ Layout correct avec header à gauche et timeline à droite
+        </div>
+
+        <div class="test-result info">
+            <strong>Test 2 : Ajout de channels</strong><br>
+            ✓ Cliquer "Add Channel" ouvre le dropdown<br>
+            ✓ Choisir "Velocity", "Pitch Bend" ou "Modulation"<br>
+            ✓ Un nouveau channel apparaît avec header coloré
+        </div>
+
+        <div class="test-result info">
+            <strong>Test 3 : Interaction avec les points</strong><br>
+            ✓ Cliquer sur la timeline grise ajoute un point bleu<br>
+            ✓ Drag un point bleu le déplace<br>
+            ✓ Points se connectent avec des courbes lisses<br>
+            ✓ Hover sur un point l'agrandit
+        </div>
+
+        <div class="test-result info">
+            <strong>Test 4 : Synchronisation du scroll</strong><br>
+            ✓ Scroll horizontal de la track synchronisé avec automation<br>
+            ✓ Scroll avec deux doigts fonctionne<br>
+            ✓ Zoom timeline affecte l'automation aussi
+        </div>
+
+        <div class="test-result info">
+            <strong>Test 5 : Suppression</strong><br>
+            ✓ Click droit sur un point le supprime<br>
+            ✓ Bouton "×" supprime tout le channel<br>
+            ✓ Minimum 2 points par channel
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Problèmes connus</h2>
+        <div class="test-result error">
+            <strong>Si l'automation n'apparaît pas :</strong><br>
+            - Vérifier que la track a la propriété `automation.visible = true`<br>
+            - Regarder la console pour les erreurs JavaScript
+        </div>
+        <div class="test-result error">
+            <strong>Si le scroll ne fonctionne pas :</strong><br>
+            - Vérifier que les deux sections (track + automation) sont synchronisées<br>
+            - Tester avec scroll trackpad et molette souris
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Résultat attendu</h2>
+        <p>L'automation doit ressembler au mockup :</p>
+        <ul>
+            <li><strong>Header sombre</strong> à gauche avec "Add Channel"</li>
+            <li><strong>Channels</strong> avec bordures blanches et indicateurs colorés</li>
+            <li><strong>Points bleus</strong> connectés par des courbes</li>
+            <li><strong>Zone grise</strong> cliquable pour ajouter des points</li>
+            <li><strong>Alignement parfait</strong> avec la timeline de la track</li>
+        </ul>
+    </div>
+
+    <script>
+        // Test automatique de base
+        console.log('🎛️ Automation Test Page Loaded');
+        console.log('✅ Ready to test automation functionality');
+        
+        // Vérifier que les modules d'automation existent
+        setTimeout(() => {
+            const dawWindow = window.parent || window.opener;
+            if (dawWindow && dawWindow.dawStore) {
+                console.log('✅ DAW Store found');
+                console.log('✅ Available automation methods:', Object.keys(dawWindow.dawStore).filter(k => k.includes('automation') || k.includes('Automation')));
+            } else {
+                console.log('⚠️ DAW Store not found - test manually in main app');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
