@@ -1,6 +1,8 @@
 import { Show, For, createEffect, createSignal, onCleanup } from "solid-js";
 import { useDawStore } from "../stores/dawStore";
 import TrackLane from "./TrackLane";
+import AutomationHeader from "./automation/AutomationHeader.jsx";
+import AutomationChannel from "./automation/AutomationChannel.jsx";
 
 // Auto-zoom utility function
 const calculateOptimalZoom = (track) => {
@@ -415,8 +417,15 @@ export default function TrackRow(props) {
           if (window._syncingTrackScroll) return;
           window._syncingTrackScroll = true;
           const scrollLeft = e.target.scrollLeft;
+          // Sync all track lane sections
           document.querySelectorAll('.track-lane-section').forEach((el) => {
             if (el !== e.target && Math.abs(el.scrollLeft - scrollLeft) > 1) {
+              el.scrollLeft = scrollLeft;
+            }
+          });
+          // Sync all automation timeline containers
+          document.querySelectorAll('.automation-timeline-container').forEach((el) => {
+            if (Math.abs(el.scrollLeft - scrollLeft) > 1) {
               el.scrollLeft = scrollLeft;
             }
           });
@@ -432,6 +441,12 @@ export default function TrackRow(props) {
             // Synchronize all lanes
             document.querySelectorAll('.track-lane-section').forEach((el) => {
               if (el !== container && Math.abs(el.scrollLeft - newScrollLeft) > 1) {
+                el.scrollLeft = newScrollLeft;
+              }
+            });
+            // Synchronize all automation timelines
+            document.querySelectorAll('.automation-timeline-container').forEach((el) => {
+              if (Math.abs(el.scrollLeft - newScrollLeft) > 1) {
                 el.scrollLeft = newScrollLeft;
               }
             });
@@ -455,6 +470,7 @@ export default function TrackRow(props) {
           trackHeight={track.height || 80}
         />
       </div>
+        {/* Automation handled by TracksArea.jsx */}
 
       {/* Resize Handle - Bottom Edge */}
       <div

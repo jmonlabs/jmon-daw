@@ -1203,9 +1203,37 @@ export const dawStore = {
         height: 150,
         // Automation properties
         automation: {
-          channels: [],
+          channels: [
+            {
+              id: `auto_vol_${index}`,
+              name: "Volume",
+              type: "volume",
+              color: "#4a90e2",
+              range: [0, 1],
+              points: [
+                { time: 0, value: 0.8 },
+                { time: 4, value: 0.6 },
+                { time: 8, value: 0.9 }
+              ]
+            },
+            {
+              id: `auto_pan_${index}`,
+              name: "Pan",
+              type: "pan",
+              color: "#e24a6a",
+              range: [-1, 1],
+              points: [
+                { time: 0, value: 0 },
+                { time: 4, value: -0.5 },
+                { time: 8, value: 0.5 }
+              ]
+            }
+          ],
           enabled: true,
-          visible: false
+          visible: false,
+          showDropdown: false
+          // Toggle automation channel dropdown for a track
+          // (must be defined after the store object, not inside demoTracks map)
         },
       };
 
@@ -1224,6 +1252,15 @@ export const dawStore = {
 
     setTracks(demoTracks);
     setBpm(demo01BasicSynth.bpm);
+
+    // Set selectedTrack to first track if available
+    if (demoTracks.length > 0) {
+      setSelectedTrack(demoTracks[0].id);
+      console.log('[DIAG] loadDemo: selectedTrack set to', demoTracks[0].id);
+    } else {
+      setSelectedTrack(null);
+      console.log('[DIAG] loadDemo: no tracks, selectedTrack set to null');
+    }
 
     // Ensure all tracks have automation property (migration for existing data)
     dawStore.migrateTracksForAutomation();
@@ -1908,8 +1945,24 @@ export const dawStore = {
       }
     });
   },
+  // Toggle automation channel dropdown for a track
+  toggleAutomationDropdown: (trackId) => {
+    const trackIndex = tracks.findIndex(track => track.id === trackId);
+    if (trackIndex === -1) return;
+    const current = tracks[trackIndex].automation?.showDropdown || false;
+    setTracks(trackIndex, 'automation', 'showDropdown', !current);
+    console.log(`🎛️ Toggled automation dropdown: ${!current} for track ${trackId}`);
+  },
 };
 
+
+// Toggle automation channel dropdown for a track
+dawStore.toggleAutomationChannelDropdown = (trackId) => {
+  const trackIndex = tracks.findIndex(track => track.id === trackId);
+  if (trackIndex === -1) return;
+  setTracks(trackIndex, 'automation', 'showDropdown', prev => !prev);
+  console.log(`🎛️ Toggled automation channel dropdown for track ${trackId}`);
+};
 
 // Export a hook-like function for compatibility
 export const useDawStore = () => dawStore;

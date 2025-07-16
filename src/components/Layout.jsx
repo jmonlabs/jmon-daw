@@ -28,6 +28,10 @@ import TimelineRuler from "./TimelineRuler.jsx";
 export default function Layout() {
   const store = useDawStore();
 
+  // Diagnostic: log tracks and selectedTrack at each render
+  console.log('[DIAG] Layout: tracks', store.tracks);
+  console.log('[DIAG] Layout: selectedTrack', store.selectedTrack);
+
   // State for automation panel dropdown
   const [showAutomationDropdown, setShowAutomationDropdown] = createSignal(false);
 
@@ -158,60 +162,67 @@ export default function Layout() {
         )}
 
         {/* Automation Panel - Overlay (par piste sélectionnée) */}
-        {store.automationPanelOpen && (
-          <div
-            style="
-              position: absolute;
-              top: 0;
-              right: 0;
-              width: 400px;
-              height: 100%;
-              background-color: var(--color-bg-modal);
-              color: var(--text-primary);
-              border-left: 1px solid var(--border-color);
-              display: flex;
-              flex-direction: column;
-              z-index: 120;
-              box-shadow: -2px 0 10px rgba(0,0,0,0.3);
-            "
-          >
-            <div style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: var(--text-primary); font-weight: 600;">Automation</span>
-              <button
-                onClick={() => store.setAutomationPanelOpen(false)}
-                class="button is-dark is-small"
-                title="Close"
-              >
-                <i class="fa-solid fa-times"></i>
-              </button>
-            </div>
-            <div style="flex: 1; overflow: auto; padding: 1rem;">
-              <AutomationControls
-                track={store.tracks.find(t => t.id === store.selectedTrack)}
-                store={store}
-              />
-              {(() => {
-                const selectedTrack = store.tracks.find(t => t.id === store.selectedTrack);
-                const channels = selectedTrack?.automation?.channels || [];
-                if (channels.length > 0) {
-                  return (
-                    <div style="margin-top: 1rem;">
-                      {channels.map(channel => (
-                        <AutomationTimeline
-                          channel={channel}
-                          beatWidth={80 * store.timelineZoom}
-                          trackLength={selectedTrack.length || 16}
-                          timelineScroll={store.timelineScroll}
-                        />
-                      ))}
+        {store.automationPanelOpen && (() => {
+          const selectedTrack = store.tracks.find(t => t.id === store.selectedTrack);
+          const channels = selectedTrack?.automation?.channels || [];
+          console.log('[DIAG] AutomationPanel: selectedTrack', selectedTrack);
+          console.log('[DIAG] AutomationPanel: channels', channels);
+          return (
+            <div
+              style="
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 400px;
+                height: 100%;
+                background-color: var(--color-bg-modal);
+                color: var(--text-primary);
+                border-left: 1px solid var(--border-color);
+                display: flex;
+                flex-direction: column;
+                z-index: 120;
+                box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+              "
+            >
+              <div style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-primary); font-weight: 600;">Automation</span>
+                <button
+                  onClick={() => store.setAutomationPanelOpen(false)}
+                  class="button is-dark is-small"
+                  title="Close"
+                >
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </div>
+              <div style="flex: 1; overflow: auto; padding: 1rem;">
+                <AutomationControls
+                  track={selectedTrack}
+                  store={store}
+                />
+                <div style="margin-top: 1rem;">
+                  <span style="color: #888; font-size: 0.9rem;">[DIAG] AutomationControls rendered</span>
+                  {channels.length > 0 ? (
+                    <div>
+                      {channels.map(channel => {
+                        console.log('[DIAG] AutomationTimeline for channel', channel);
+                        return (
+                          <AutomationTimeline
+                            channel={channel}
+                            beatWidth={80 * store.timelineZoom}
+                            trackLength={selectedTrack.length || 16}
+                            timelineScroll={store.timelineScroll}
+                          />
+                        );
+                      })}
                     </div>
-                  );
-                }
-                return null;
-              })()}
+                  ) : (
+                    <div style="color: #c00; font-size: 1rem; margin-top: 1rem;">No automation channels found</div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Global Context Menu */}
         <NoteContextMenu store={store} />

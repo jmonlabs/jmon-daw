@@ -2,6 +2,7 @@ import { For, createSignal, Show, createEffect, createMemo } from 'solid-js';
 import { useDawStore } from '../stores/dawStore';
 import { midiToNoteName, noteNameToMidi, snapTimeToGrid } from '../utils/noteConversion';
 import { audioEngine } from '../utils/audioEngine';
+import { generateTemporalGrid } from '../utils/gridUtils';
 
 
 // Piano keys for background - Extended to cover full MIDI range 0-127
@@ -733,6 +734,40 @@ export default function TrackLane(props) {
         }
       }}
     >
+      {/* Temporal Grid - Fixed position behind notes */}
+      <div
+        class="temporal-grid"
+        style={`
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 5000px;
+          height: 100%;
+          transform: translateX(${-props.timelineScroll}px);
+          z-index: 0;
+        `}
+      >
+        <svg width="5000" height={currentHeight()} style="position: absolute; top: 0; left: 0;">
+          <For each={generateTemporalGrid(
+            typeof props.beatWidth === 'function' ? props.beatWidth() : props.beatWidth,
+            5000,
+            props.timelineScroll
+          )}>
+            {(line) => (
+              <line
+                x1={line.x}
+                y1={0}
+                x2={line.x}
+                y2={currentHeight()}
+                stroke="#ddd"
+                stroke-width={line.strokeWidth}
+                opacity={line.opacity}
+              />
+            )}
+          </For>
+        </svg>
+      </div>
+
       {/* Notes Area - Full Width */}
       <div 
         class="notes-area"
@@ -743,6 +778,7 @@ export default function TrackLane(props) {
           width: 5000px;
           height: 100%;
           transform: translateX(${-props.timelineScroll}px) translateY(${-(props.track.verticalScroll || 0)}px);
+          z-index: 1;
         `}
       >
         {/* Piano Roll Background - Only in extended mode */}

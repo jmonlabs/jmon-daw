@@ -1,6 +1,7 @@
 import { For, Show } from 'solid-js';
 import { timeToX, valueToY, generateSplinePath } from './automationUtils';
 import { AUTOMATION_CONSTANTS } from './automationConfig';
+import { generateTemporalGrid } from '../../utils/gridUtils';
 
 const AutomationTimeline = (props) => {
   const { 
@@ -18,11 +19,11 @@ const AutomationTimeline = (props) => {
   return (
     <div 
       class="channel-timeline"
-      style="height: 80px; position: relative; background: #f8f9fa; border-radius: 4px; overflow: hidden;"
+      style="height: 80px; position: relative; background: #f8f9fa; overflow: hidden; width: 100%;"
     >
       <div 
         class="timeline-scroll-container"
-        style={`transform: translateX(-${timelineScroll}px); height: 100%;`}
+        style={`transform: translateX(-${timelineScroll}px); height: 100%; width: ${timelineWidth}px; position: absolute; top: 0; left: 0;`}
       >
         <svg
           width={timelineWidth}
@@ -31,38 +32,34 @@ const AutomationTimeline = (props) => {
           style="cursor: crosshair; display: block;"
           onClick={(e) => onTimelineClick?.(e, channel)}
         >
-          {/* Clean grid background */}
-          <defs>
-            <pattern 
-              id={`grid-${channel.id}`} 
-              width={beatWidth * 4} 
-              height={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT} 
-              patternUnits="userSpaceOnUse"
-            >
-              {/* Vertical grid lines */}
-              <line 
-                x1={beatWidth * 4} 
-                y1="0" 
-                x2={beatWidth * 4} 
-                y2={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT}
-                stroke="#f1f3f4" 
-                stroke-width="1"
-              />
-              {/* Horizontal center line */}
-              <line 
-                x1="0" 
-                y1={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT / 2} 
-                x2={beatWidth * 4} 
-                y2={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT / 2}
-                stroke="#f8f9fa" 
-                stroke-width="1"
-              />
-            </pattern>
-          </defs>
-          
-          {/* Grid background */}
+          {/* Background */}
           <rect width="100%" height="100%" fill="#fafbfc" />
-          <rect width="100%" height="100%" fill={`url(#grid-${channel.id})`} />
+          
+          {/* Temporal Grid - synchronized with piano roll */}
+          <For each={generateTemporalGrid(beatWidth, timelineWidth, timelineScroll)}>
+            {(line) => (
+              <line
+                x1={line.x}
+                y1={0}
+                x2={line.x}
+                y2={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT}
+                stroke="#ddd"
+                stroke-width={line.strokeWidth}
+                opacity={line.opacity}
+              />
+            )}
+          </For>
+          
+          {/* Horizontal center line */}
+          <line 
+            x1="0" 
+            y1={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT / 2} 
+            x2={timelineWidth} 
+            y2={AUTOMATION_CONSTANTS.CHANNEL_HEIGHT / 2}
+            stroke="#e0e0e0" 
+            stroke-width="1"
+            opacity="0.5"
+          />
           
           {/* Zero line (for parameters that can be negative) */}
           <Show when={channel.range[0] < 0}>
@@ -101,8 +98,8 @@ const AutomationTimeline = (props) => {
                 cx={timeToX(point.time, beatWidth)}
                 cy={valueToY(point.value, channel.range, AUTOMATION_CONSTANTS.CHANNEL_HEIGHT)}
                 r={AUTOMATION_CONSTANTS.CONTROL_POINT_RADIUS}
-                fill="#007bff"
-                stroke="#ffffff"
+                fill="gray"
+                stroke="white"
                 stroke-width="2"
                 class="control-point"
                 style="cursor: move; transition: all 0.1s ease;"
@@ -110,11 +107,11 @@ const AutomationTimeline = (props) => {
                 onContextMenu={(e) => onPointRightClick?.(e, channel, index())}
                 onMouseEnter={(e) => {
                   e.target.setAttribute('r', '6');
-                  e.target.setAttribute('fill', '#0056b3');
+                  e.target.style.filter = 'brightness(1.2)';
                 }}
                 onMouseLeave={(e) => {
                   e.target.setAttribute('r', '4');
-                  e.target.setAttribute('fill', '#007bff');
+                  e.target.style.filter = 'brightness(1)';
                 }}
               />
             )}

@@ -1,8 +1,12 @@
-import { For, Show } from "solid-js";
+import { For, Show, createSignal, onMount } from "solid-js";
 import TrackRow from "./TrackRow.jsx";
 import ModulationTimeline from "./ModulationTimeline.jsx";
+import AutomationChannelControls from "./automation/AutomationChannelControls.jsx";
+import AutomationControls from "./automation/AutomationControls.jsx";
 
 export default function TracksArea({ store }) {
+  const [scrollLeft, setScrollLeft] = createSignal(0);
+  
   return (
     <div
       class="tracks-container"
@@ -10,17 +14,9 @@ export default function TracksArea({ store }) {
       ref={(ref) => {
         if (ref) {
           window.tracksContainer = ref;
-          // Synchronize automation lanes when tracks scroll
+          // Update scroll signal when scroll changes
           ref.addEventListener('scroll', (e) => {
-            if (window._syncingAutomationScroll) return;
-            window._syncingAutomationScroll = true;
-            const scrollLeft = ref.scrollLeft;
-            document.querySelectorAll('.automation-timeline-container').forEach((el) => {
-              if (Math.abs(el.scrollLeft - scrollLeft) > 1) {
-                el.scrollLeft = scrollLeft;
-              }
-            });
-            window._syncingAutomationScroll = false;
+            setScrollLeft(ref.scrollLeft);
           });
         }
       }}
@@ -118,19 +114,87 @@ export default function TracksArea({ store }) {
                   index={index()}
                   beatWidth={beatWidth}
                   barWidth={barWidth}
-                  timelineScroll={store.timelineScroll}
+                  timelineScroll={scrollLeft()}
                   gridMarkers={gridMarkers()}
                 />
               </div>
+              
               {/* Automation Lane - Only show if enabled for this track */}
               <Show when={track.automation?.visible}>
-                <div class="automation-timeline-container" style="background: #f8f9fa; border-bottom: 2px solid var(--border-color);">
-                  <ModulationTimeline
-                    trackId={track.id}
-                    beatWidth={beatWidth()}
-                    trackLength={track.length || 16}
-                    timelineScroll={store.timelineScroll}
-                  />
+                <div 
+                  style="
+                    background: #f8f9fa; 
+                    border-bottom: 2px solid var(--border-color);
+                    display: flex;
+                    flex-direction: row;
+                    position: relative;
+                  "
+                >
+                  {/* Left column - Automation controls (fixed, no scroll) */}
+                  <div
+                    style="
+                      width: 200px;
+                      background: #f8f9fa;
+                      border-right: 1px solid var(--border-color);
+                      flex-shrink: 0;
+                    "
+                  >
+                    <AutomationControls 
+                      track={track}
+                      store={store}
+                    />
+                  </div>
+                  
+                  {/* Automation timeline (scrollable) */}
+                  <div 
+                    class="automation-timeline-container" 
+                    style="
+                      flex: 1;
+                      overflow-x: auto;
+                      overflow-y: hidden;
+                      position: relative;
+                    "
+                    onScroll={(e) => {
+                      if (window._syncingTrackScroll) return;
+                      window._syncingTrackScroll = true;
+                      const scrollLeft = e.target.scrollLeft;
+                      // Sync all track lane sections
+                      document.querySelectorAll('.track-lane-section').forEach((el) => {
+                        if (Math.abs(el.scrollLeft - scrollLeft) > 1) {
+                          el.scrollLeft = scrollLeft;
+                        }
+                      });
+                      // Sync all automation timeline containers
+                      document.querySelectorAll('.automation-timeline-container').forEach((el) => {
+                        if (el !== e.target && Math.abs(el.scrollLeft - scrollLeft) > 1) {
+                          el.scrollLeft = scrollLeft;
+                        }
+                      });
+                      window._syncingTrackScroll = false;
+                    }}
+                  >
+                    <ModulationTimeline
+                      trackId={track.id}
+                      beatWidth={beatWidth()}
+                      trackLength={track.length || 16}
+                      timelineScroll={scrollLeft()}
+                    />
+                  </div>
+                  
+                  {/* Right column - Automation controls (fixed) */}
+                  <div
+                    style="
+                      width: 250px;
+                      background: #f8f9fa;
+                      border-left: 1px solid var(--border-color);
+                      flex-shrink: 0;
+                    "
+                  >
+                    <AutomationChannelControls 
+                      track={track}
+                      store={store}
+                    />
+                  </div>
                 </div>
               </Show>
             </>
