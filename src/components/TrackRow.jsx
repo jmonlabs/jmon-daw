@@ -422,6 +422,24 @@ export default function TrackRow(props) {
           });
           window._syncingTrackScroll = false;
         }}
+        onWheel={(e) => {
+          // Enable two-finger horizontal trackpad scroll
+          if (Math.abs(e.deltaX) > 0) {
+            e.preventDefault();
+            const container = e.currentTarget;
+            const newScrollLeft = Math.max(0, container.scrollLeft + e.deltaX);
+            container.scrollLeft = newScrollLeft;
+            // Synchronize all lanes
+            document.querySelectorAll('.track-lane-section').forEach((el) => {
+              if (el !== container && Math.abs(el.scrollLeft - newScrollLeft) > 1) {
+                el.scrollLeft = newScrollLeft;
+              }
+            });
+          } else if (Math.abs(e.deltaY) > 0) {
+            // Prevent vertical scroll from propagating to page
+            e.stopPropagation();
+          }
+        }}
         ref={(ref) => {
           trackLaneSectionRef = ref;
         }}
