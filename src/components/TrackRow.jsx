@@ -90,21 +90,10 @@ const calculateOptimalZoom = (track) => {
 export default function TrackRow(props) {
   const store = useDawStore();
 
-  const { track, index, beatWidth, barWidth, timelineScroll, gridMarkers } =
-    props;
+  const { track, index, beatWidth, barWidth, timelineScroll, gridMarkers } = props;
 
   let trackLaneSectionRef;
-  
-  // Force synchronization of scroll when store.timelineScroll changes
-  createEffect(() => {
-    const currentScroll = store.timelineScroll;
-    if (
-      trackLaneSectionRef &&
-      Math.abs(trackLaneSectionRef.scrollLeft - currentScroll) > 1
-    ) {
-      trackLaneSectionRef.scrollLeft = currentScroll;
-    }
-  });
+  // No scroll synchronization with store. All scroll logic is DOM-based.
 
   return (
     <div
@@ -423,11 +412,15 @@ export default function TrackRow(props) {
           z-index: 1;
         "
         onScroll={(e) => {
-          // Sync horizontal scroll with store - but avoid infinite loops
+          if (window._syncingTrackScroll) return;
+          window._syncingTrackScroll = true;
           const scrollLeft = e.target.scrollLeft;
-          if (Math.abs(scrollLeft - store.timelineScroll) > 1) {
-            store.setTimelineScroll(scrollLeft);
-          }
+          document.querySelectorAll('.track-lane-section').forEach((el) => {
+            if (el !== e.target && Math.abs(el.scrollLeft - scrollLeft) > 1) {
+              el.scrollLeft = scrollLeft;
+            }
+          });
+          window._syncingTrackScroll = false;
         }}
         ref={(ref) => {
           trackLaneSectionRef = ref;
@@ -438,7 +431,7 @@ export default function TrackRow(props) {
           index={index}
           beatWidth={beatWidth}
           barWidth={barWidth}
-          timelineScroll={timelineScroll}
+          timelineScroll={window.tracksContainer?.scrollLeft || 0}
           gridMarkers={gridMarkers}
           minHeight={80}
           trackHeight={track.height || 80}
