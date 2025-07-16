@@ -122,8 +122,17 @@ export default function TracksArea({ store }) {
                   gridMarkers={gridMarkers()}
                 />
               </div>
-              {/* ...automation section and empty state... */}
-              {/* ...existing code... */}
+              {/* Automation Lane - Only show if enabled for this track */}
+              <Show when={track.automation?.visible}>
+                <div class="automation-timeline-container" style="background: #f8f9fa; border-bottom: 2px solid var(--border-color);">
+                  <ModulationTimeline
+                    trackId={track.id}
+                    beatWidth={beatWidth()}
+                    trackLength={track.length || 16}
+                    timelineScroll={store.timelineScroll}
+                  />
+                </div>
+              </Show>
             </>
           );
         }}

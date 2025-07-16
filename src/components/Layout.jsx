@@ -1,3 +1,4 @@
+import AutomationControls from "./automation/AutomationControls.jsx";
 import NoteContextMenu from "./NoteContextMenu.jsx";
 import {
   Show,
@@ -26,6 +27,9 @@ import TimelineRuler from "./TimelineRuler.jsx";
 
 export default function Layout() {
   const store = useDawStore();
+
+  // State for automation panel dropdown
+  const [showAutomationDropdown, setShowAutomationDropdown] = createSignal(false);
 
   // Make store available globally for audioEngine
   window.dawStore = store;
@@ -90,7 +94,7 @@ export default function Layout() {
       </header>
 
       {/* Main Content Area */}
-      <main style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <main style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         {/* Timeline Ruler - Modularized */}
         <TimelineRuler store={store} />
 
@@ -101,7 +105,7 @@ export default function Layout() {
         <EffectEditor store={store} />
 
         {/* Backdrop for effect editor */}
-        <Show when={store.selectedEffect}>
+        {store.selectedEffect && (
           <div
             style="
               position: absolute;
@@ -114,15 +118,13 @@ export default function Layout() {
             "
             onClick={store.closeEffectEditor}
           />
-        </Show>
+        )}
 
         {/* Master Bus Panel - Overlay */}
-        <Show when={store.masterBusOpen}>
-          <MasterBus />
-        </Show>
+        {store.masterBusOpen && <MasterBus />}
 
         {/* JMON Editor Panel - Overlay */}
-        <Show when={store.jmonEditorOpen}>
+        {store.jmonEditorOpen && (
           <div
             style="
               position: absolute;
@@ -149,12 +151,67 @@ export default function Layout() {
                 <i class="fa-solid fa-times"></i>
               </button>
             </div>
-
             <div style="flex: 1; overflow: hidden;">
               <JmonEditor />
             </div>
           </div>
-        </Show>
+        )}
+
+        {/* Automation Panel - Overlay (par piste sélectionnée) */}
+        {store.automationPanelOpen && (
+          <div
+            style="
+              position: absolute;
+              top: 0;
+              right: 0;
+              width: 400px;
+              height: 100%;
+              background-color: var(--color-bg-modal);
+              color: var(--text-primary);
+              border-left: 1px solid var(--border-color);
+              display: flex;
+              flex-direction: column;
+              z-index: 120;
+              box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            "
+          >
+            <div style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-primary); font-weight: 600;">Automation</span>
+              <button
+                onClick={() => store.setAutomationPanelOpen(false)}
+                class="button is-dark is-small"
+                title="Close"
+              >
+                <i class="fa-solid fa-times"></i>
+              </button>
+            </div>
+            <div style="flex: 1; overflow: auto; padding: 1rem;">
+              <AutomationControls
+                track={store.tracks.find(t => t.id === store.selectedTrack)}
+                store={store}
+              />
+              {(() => {
+                const selectedTrack = store.tracks.find(t => t.id === store.selectedTrack);
+                const channels = selectedTrack?.automation?.channels || [];
+                if (channels.length > 0) {
+                  return (
+                    <div style="margin-top: 1rem;">
+                      {channels.map(channel => (
+                        <AutomationTimeline
+                          channel={channel}
+                          beatWidth={80 * store.timelineZoom}
+                          trackLength={selectedTrack.length || 16}
+                          timelineScroll={store.timelineScroll}
+                        />
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Global Context Menu */}
         <NoteContextMenu store={store} />
